@@ -6,13 +6,16 @@ import { SurOrdinateur } from "./components/SurOrdinateur";
 import { Accueil } from "./pages/Accueil";
 import { Depenses } from "./pages/Depenses";
 import { FicheDepense } from "./pages/FicheDepense";
+import { FicheRemboursement } from "./pages/FicheRemboursement";
+import { NouveauRemboursement } from "./pages/NouveauRemboursement";
 import { Parametres } from "./pages/Parametres";
+import { Remboursements } from "./pages/Remboursements";
 import { Sauvegarde } from "./pages/Sauvegarde";
 import { Connexion } from "./pages/compte/Connexion";
 import { Lien } from "./pages/compte/Lien";
 import { Comptes } from "./pages/compte/Comptes";
 import { Journal } from "./pages/compte/Journal";
-import { estAdmin, utilisateur } from "./lib/session";
+import { estAdmin, peutEcrire, utilisateur } from "./lib/session";
 import type { Statut } from "./data/depenses";
 import { useEcran } from "./lib/ecran";
 
@@ -72,13 +75,23 @@ export const depensesRoute = createRoute({
   },
 });
 export const ficheDepenseRoute = createRoute({ getParentRoute: () => application, path: "/depenses/$id", component: FicheDepense });
+const remboursements = createRoute({ getParentRoute: () => application, path: "/remboursements", component: Remboursements });
+const nouveauRemboursement = createRoute({
+  getParentRoute: () => application,
+  path: "/remboursements/nouveau",
+  component: surOrdinateur(NouveauRemboursement, "Nouveau remboursement"),
+  beforeLoad: () => {
+    if (!peutEcrire()) throw redirect({ to: "/remboursements" });
+  },
+});
+export const ficheRemboursementRoute = createRoute({ getParentRoute: () => application, path: "/remboursements/$id", component: FicheRemboursement });
 const parametres = createRoute({ getParentRoute: () => application, path: "/parametres", component: surOrdinateur(Parametres, "Paramètres") });
 const sauvegarde = createRoute({ getParentRoute: () => application, path: "/sauvegarde", component: surOrdinateur(Sauvegarde, "Sauvegarde"), beforeLoad: reserveAdmin });
 const comptes = createRoute({ getParentRoute: () => application, path: "/comptes", component: surOrdinateur(Comptes, "Comptes"), beforeLoad: reserveAdmin });
 const journal = createRoute({ getParentRoute: () => application, path: "/journal", component: surOrdinateur(Journal, "Journal"), beforeLoad: reserveAdmin });
 
 export const router = createRouter({
-  routeTree: racine.addChildren([connexionRoute, lienRoute, application.addChildren([accueilRoute, depensesRoute, ficheDepenseRoute, parametres, sauvegarde, comptes, journal])]),
+  routeTree: racine.addChildren([connexionRoute, lienRoute, application.addChildren([accueilRoute, depensesRoute, ficheDepenseRoute, remboursements, nouveauRemboursement, ficheRemboursementRoute, parametres, sauvegarde, comptes, journal])]),
   history: createBrowserHistory(),
 });
 

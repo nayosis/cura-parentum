@@ -1,16 +1,13 @@
 import { and, desc, eq, getTableColumns, isNotNull, isNull, like, or, sql, type SQL } from "drizzle-orm";
-import { existsSync, statSync } from "node:fs";
-import { extname } from "node:path";
 import { batch, db, newId, query, type Statement } from "../db/client";
 import { depense, justificatif, moyenPaiement, remboursement } from "../db/schema";
-import { MIME_PAR_EXTENSION } from "../lib/documents";
 import { ErreurMetier } from "../../serveur/erreurs";
-import { cheminFichier, nomValide } from "../../serveur/fichiers";
 import { adminCourant, utilisateurCourant } from "../../serveur/tracabilite";
+import { DATE, instructionsJustificatifs, type FichierARattacher } from "./commun";
 import { verifierVersion, versionDe } from "./version";
 
 export type CategorieDeDepense = { id: string; nom: string; couleur: string };
-export type FichierARattacher = { fichier: string; nom: string };
+export type { FichierARattacher } from "./commun";
 
 /** Ce que voit l'utilisateur : « à rembourser » = pas encore cochée dans un remboursement. */
 export type Statut = "toutes" | "a_rembourser" | "remboursees" | "sans_justificatif";
@@ -21,7 +18,6 @@ const CATEGORIES = sql<string>`(select json_group_array(json_object('id', c.id, 
   from depense_categorie dc join categorie c on c.id = dc.categorie_id where dc.depense_id = "depense"."id")`;
 const NB_JUSTIFICATIFS = sql<number>`(select count(*) from justificatif j where j.depense_id = "depense"."id" and j.archive = 0)`;
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // --- Lecture
 
@@ -92,24 +88,6 @@ async function verifierModifiable(id: string) {
   if (l[0] && !adminCourant()) throw new ErreurMetier("Cette dépense a été remboursée : seul un admin peut la modifier.", 403);
 }
 
-/** Fichiers déjà envoyés (POST /api/fichiers) : présents sur le disque, jamais rattachés. Type et taille relus sur le disque. */
-async function instructionsJustificatifs(fichiers: FichierARattacher[], lien: { depenseId?: string; remboursementId?: string }): Promise<Statement[]> {
-  const vus = new Set<string>();
-  const sts: Statement[] = [];
-  for (const f of fichiers) {
-    if (!nomValide(f.fichier) || !existsSync(cheminFichier(f.fichier))) throw new ErreurMetier("Fichier introuvable : renvoyez-le.");
-    const mime = MIME_PAR_EXTENSION[extname(f.fichier).slice(1)];
-    if (!mime) throw new ErreurMetier("Type de fichier non pris en charge.");
-    if (vus.has(f.fichier) || (await query("select 1 from justificatif where fichier = ?", [f.fichier])).length) throw new ErreurMetier("Ce fichier est déjà rattaché.");
-    vus.add(f.fichier);
-    sts.push({
-      sql: "insert into justificatif (id, depense_id, remboursement_id, nom, fichier, mime, taille) values (?, ?, ?, ?, ?, ?, ?)",
-      params: [newId(), lien.depenseId ?? null, lien.remboursementId ?? null, f.nom.trim() || f.fichier, f.fichier, mime, statSync(cheminFichier(f.fichier)).size],
-    });
-  }
-  return sts;
-}
-
 const instructionsCategories = (id: string, categorieIds: string[]): Statement[] => [
   { sql: "delete from depense_categorie where depense_id = ?", params: [id] },
   ...[...new Set(categorieIds)].map((c) => ({ sql: "insert into depense_categorie (depense_id, categorie_id) values (?, ?)", params: [id, c] })),
@@ -176,10 +154,12 @@ export async function ajouterJustificatifs(cible: string, fichiers: FichierARatt
   await batch(sts);
 }
 
+/** Justificatif d'une dépense : comme la dépense ; d'un remboursement (validé, donc verrouillé) : admins seulement. */
 async function justificatifModifiable(id: string) {
-  const [j] = await db.select({ depenseId: justificatif.depenseId }).from(justificatif).where(eq(justificatif.id, id));
+  const [j] = await db.select({ depenseId: justificatif.depenseId, remboursementId: justificatif.remboursementId }).from(justificatif).where(eq(justificatif.id, id));
   if (!j) throw new ErreurMetier("Justificatif introuvable.", 404);
   if (j.depenseId) await verifierModifiable(j.depenseId);
+  if (j.remboursementId && !adminCourant()) throw new ErreurMetier("Seul un admin peut retirer ou renommer un justificatif de remboursement.", 403);
 }
 
 /** Retirer n'efface jamais : le justificatif est archivé, il reste consultable (fiche, journal, sauvegardes). */

@@ -28,7 +28,8 @@ type Ligne = Record<string, unknown>;
 
 /**
  * La fiche telle qu'elle est en base, quelle que soit sa table (null si elle n'existe pas ou plus).
- * Une dépense est complétée de ce qui la décrit vraiment : moyen de paiement, catégories et justificatifs.
+ * Une dépense est complétée de ce qui la décrit vraiment : moyen de paiement, catégories et justificatifs ;
+ * un remboursement, des dépenses qu'il couvre et de ses justificatifs.
  */
 export function instantane(id: string): (Ligne & { table: string }) | null {
   const base = baseCourante();
@@ -42,6 +43,10 @@ export function instantane(id: string): (Ligne & { table: string }) | null {
         .all(id)
         .map((c) => c.nom);
       ligne.justificatifs = base.query("SELECT id, nom, fichier, archive FROM justificatif WHERE depense_id = ? ORDER BY cree_le").all(id);
+    }
+    if (table === "remboursement") {
+      ligne.depenses = base.query("SELECT id, date, libelle, montant FROM depense WHERE remboursement_id = ? ORDER BY date").all(id);
+      ligne.justificatifs = base.query("SELECT id, nom, fichier, archive FROM justificatif WHERE remboursement_id = ? ORDER BY cree_le").all(id);
     }
     return { table, ...ligne };
   }
@@ -97,9 +102,13 @@ export function lireJournal(f: { utilisateur?: string; depuis?: string; avant?: 
     params.push(f.avant);
   }
   if (f.cible) {
-    // Une dépense : ses propres lignes et celles de ses justificatifs.
-    conditions.push("(cible = ? OR json_extract(apres, '$.depense_id') = ? OR json_extract(avant, '$.depense_id') = ?)");
-    params.push(f.cible, f.cible, f.cible);
+    // Une dépense : ses lignes et celles de ses justificatifs. Un remboursement : ses lignes, celles de ses
+    // justificatifs et des dépenses qu'il couvre (retouchées ensuite par un admin).
+    conditions.push(
+      `(cible = ? OR json_extract(apres, '$.depense_id') = ? OR json_extract(avant, '$.depense_id') = ?
+        OR json_extract(apres, '$.remboursement_id') = ? OR json_extract(avant, '$.remboursement_id') = ?)`,
+    );
+    params.push(f.cible, f.cible, f.cible, f.cible, f.cible);
   }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   return baseCourante()

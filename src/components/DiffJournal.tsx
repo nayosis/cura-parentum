@@ -12,6 +12,7 @@ const LIBELLES: Record<string, string> = {
   note: "Note",
   categories: "Catégories",
   justificatifs: "Justificatifs",
+  depenses: "Dépenses",
   nom: "Nom",
   archive: "Retiré",
   archivee: "Archivée",
@@ -36,6 +37,10 @@ function lisible(cle: string, v: unknown): string {
   if (cle === "justificatifs" && Array.isArray(v)) {
     const actifs = (v as { nom: string; archive: number }[]).filter((j) => !j.archive);
     return actifs.map((j) => j.nom).join(", ") || "aucun";
+  }
+  if (cle === "depenses" && Array.isArray(v)) {
+    const total = (v as { montant: number }[]).reduce((t, d) => t + d.montant, 0);
+    return `${v.length} dépense${v.length > 1 ? "s" : ""} (${euros(total)})`;
   }
   return typeof v === "object" ? JSON.stringify(v) : String(v);
 }

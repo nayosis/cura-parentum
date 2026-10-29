@@ -2,7 +2,8 @@
 export function dateLisible(d: string | null | undefined, options: Intl.DateTimeFormatOptions = { day: "numeric", month: "long", year: "numeric" }) {
   if (!d) return "";
   const [a, m, j] = d.slice(0, 10).split("-").map(Number);
-  return new Date(a, m - 1, j).toLocaleDateString("fr-FR", options);
+  // « 1 octobre » → « 1er octobre » (pas « 01/10 »).
+  return new Date(a, m - 1, j).toLocaleDateString("fr-FR", options).replace(/(^|\s)1 (?=\p{L})/u, "$11er ");
 }
 
 /**

@@ -5,55 +5,15 @@ import { IconArrowLeft, IconLock, IconPencil, IconTrash } from "@tabler/icons-re
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ficheDepense, supprimerDepense } from "../data/depenses";
-import { DiffJournal } from "../components/DiffJournal";
+import { Historique, quand } from "../components/Historique";
 import { Justificatifs } from "../components/Justificatifs";
 import { ModalDepense } from "../components/ModalDepense";
 import { dateLisible } from "../lib/dates";
 import { useEcran } from "../lib/ecran";
 import { euros } from "../lib/montants";
 import { ecrire } from "../lib/query";
-import { appelApi } from "../lib/rpc";
 import { estAdmin, peutEcrire } from "../lib/session";
 import { ficheDepenseRoute } from "../router";
-
-type LigneJournal = { id: number; quand: string; utilisateur: string; fonction: string; avant: string | null; apres: string | null };
-
-const ACTIONS: Record<string, string> = {
-  creerDepense: "Création",
-  majDepense: "Modification",
-  supprimerDepense: "Suppression",
-  ajouterJustificatifs: "Justificatif ajouté",
-  retirerJustificatif: "Justificatif retiré",
-  renommerJustificatif: "Justificatif renommé",
-};
-
-const quand = (iso: string) => new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
-
-/** Historique de la dépense (admins : le journal leur est réservé). */
-function Historique({ id }: { id: string }) {
-  const { data } = useQuery({ queryKey: ["journal", "depense", id], queryFn: () => appelApi<{ lignes: LigneJournal[] }>(`/api/journal?cible=${id}`) });
-  const lignes = data?.lignes ?? [];
-  return (
-    <Card withBorder>
-      <Title order={4} mb="xs">
-        Historique
-      </Title>
-      <Stack gap="sm">
-        {lignes.map((l) => (
-          <div key={l.id}>
-            <Text size="sm">
-              <b>{ACTIONS[l.fonction] ?? l.fonction}</b>{" "}
-              <Text span c="dimmed" size="xs">
-                {quand(l.quand)} · {l.utilisateur}
-              </Text>
-            </Text>
-            {l.fonction !== "creerDepense" && <DiffJournal avant={l.avant} apres={l.apres} />}
-          </div>
-        ))}
-      </Stack>
-    </Card>
-  );
-}
 
 /** Une dépense : montant, détails, justificatifs ; modifier, supprimer ; historique pour les admins. */
 export function FicheDepense() {
@@ -116,7 +76,11 @@ export function FicheDepense() {
 
       {remboursee && (
         <Alert color="gray" icon={<IconLock size={18} />} p="sm">
-          Remboursée par le virement du {dateLisible(d.dateVirement)}.{" "}
+          Remboursée par le{" "}
+          <Anchor size="sm" renderRoot={(p) => <Link {...p} to="/remboursements/$id" params={{ id: d.remboursementId! }} />}>
+            virement du {dateLisible(d.dateVirement)}
+          </Anchor>
+          .{" "}
           {estAdmin() ? "Vous pouvez encore la modifier (admin) ; c'est journalisé." : "Elle n'est plus modifiable."}
         </Alert>
       )}

@@ -14,6 +14,8 @@ const LIBELLES: Record<string, string> = {
   ajouterJustificatifs: "Justificatif ajouté",
   retirerJustificatif: "Justificatif retiré",
   renommerJustificatif: "Justificatif renommé",
+  creerRemboursement: "Remboursement validé",
+  majRemboursement: "Remboursement corrigé",
   majFoyer: "Foyer modifié",
   creerTypePaiement: "Nouveau type de paiement",
   majTypePaiement: "Type de paiement modifié",

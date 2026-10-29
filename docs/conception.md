@@ -91,6 +91,10 @@ saisie**.
 - Réservés à l'ordinateur ou à la tablette (page « Cette page s'utilise sur un ordinateur ») : nouveau remboursement,
   paramètres, bilan annuel, exports, comptes, journal, sauvegarde.
 - **Pas de saisie hors ligne** en V1 : on photographie le ticket et on saisit plus tard.
+- **Libellés proposés** (0.2) : sous le libellé, les 5 plus fréquents, puis ceux qui contiennent le texte tapé (sans
+  tenir compte des majuscules ni des accents). En choisir un coche aussi les catégories de la dernière dépense à ce
+  libellé. Un admin corrige les variantes dans Paramètres › Libellés : toutes les dépenses concernées sont renommées,
+  chacune au journal avec la fiche avant / après.
 
 ## Hors V1
 

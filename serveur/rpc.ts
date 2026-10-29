@@ -17,7 +17,7 @@ export type Droit = "lecture" | "ecriture";
 
 /** Fonctions qui ne modifient rien. Toute autre fonction exposée est une écriture. */
 const LECTURE = new Set([
-  "lireFoyer", "listeTypesPaiement", "listeMoyensPaiement", "listeCategories", "listeDepenses", "ficheDepense", "derniereSaisie",
+  "lireFoyer", "listeTypesPaiement", "listeMoyensPaiement", "listeCategories", "listeDepenses", "ficheDepense", "derniereSaisie", "libellesFrequents",
   "listeRemboursements", "enAttente", "ficheRemboursement", "plageProposee", "candidats", "tableauDeBord", "bilanAnnuel", "anneesDisponibles",
 ]);
 

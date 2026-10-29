@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { ActionIcon, Badge, Button, Card, ColorSwatch, Group, Menu, Modal, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from "@mantine/core";
+import { ActionIcon, Autocomplete, Badge, Button, Card, ColorSwatch, Group, Menu, Modal, Select, SimpleGrid, Stack, Table, Text, TextInput, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconArchive, IconDots, IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
+import { IconArchive, IconDots, IconPencil, IconPlus, IconSearch, IconTrash } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import {
   creerCategorie, creerMoyenPaiement, creerTypePaiement, fusionnerCategories, lireFoyer, listeCategories, listeMoyensPaiement, listeTypesPaiement,
   majCategorie, majFoyer, majMoyenPaiement, majTypePaiement, supprimerCategorie, supprimerMoyenPaiement, supprimerTypePaiement,
 } from "../data/parametres";
+import { libellesFrequents, renommerLibelle } from "../data/depenses";
+import { normaliser, type Libelle } from "../components/SuggestionsLibelle";
 import { ecrire } from "../lib/query";
-import { peutEcrire } from "../lib/session";
+import { estAdmin, peutEcrire } from "../lib/session";
 
 type Moyen = Awaited<ReturnType<typeof listeMoyensPaiement>>[number];
 type TypeP = Awaited<ReturnType<typeof listeTypesPaiement>>[number];
@@ -331,7 +334,84 @@ function Categories({ ecriture }: { ecriture: boolean }) {
   );
 }
 
-/** Foyer, moyens et types de paiement, catégories. Lecture seule pour le rôle lecture. */
+function ModalRenommer({ libelle, libelles, onClose }: { libelle: Libelle | null; libelles: Libelle[]; onClose: () => void }) {
+  const [nouveau, setNouveau] = useState("");
+  const [cle, setCle] = useState<string | null>(null);
+  if ((libelle?.libelle ?? null) !== cle) {
+    setCle(libelle?.libelle ?? null);
+    setNouveau(libelle?.libelle ?? "");
+  }
+  const renommer = async () => {
+    if (!libelle) return;
+    const n = await ecrire(() => renommerLibelle(libelle.libelle, nouveau));
+    if (n === undefined) return;
+    notifications.show({ color: "green", message: `${n} dépense${n > 1 ? "s" : ""} renommée${n > 1 ? "s" : ""}` });
+    onClose();
+  };
+  return (
+    <Modal opened={!!libelle} onClose={onClose} title={`Renommer « ${libelle?.libelle ?? ""} »`}>
+      <Stack>
+        <Text size="sm" c="dimmed">
+          {(libelle?.nb ?? 0) > 1 ? `Les ${libelle?.nb} dépenses à ce libellé (remboursées comprises) prennent` : "La dépense à ce libellé (même remboursée) prend"} le nouveau. Choisir un libellé existant regroupe les deux. Chaque
+          dépense modifiée est inscrite au journal.
+        </Text>
+        <Autocomplete
+          label="Nouveau libellé"
+          data={[...new Set(libelles.filter((l) => l.libelle !== libelle?.libelle).map((l) => l.libelle))]}
+          value={nouveau}
+          onChange={setNouveau}
+          data-autofocus
+        />
+        <Button onClick={renommer} disabled={!nouveau.trim() || nouveau.trim() === libelle?.libelle}>
+          Renommer
+        </Button>
+      </Stack>
+    </Modal>
+  );
+}
+
+/** Libellés déjà saisis, pour corriger fautes et variantes (« Delaunay volaille » → « Delaunay Volailler »). Admin seulement. */
+function Libelles() {
+  const { data: libelles = [] } = useQuery({ queryKey: ["libellesFrequents"], queryFn: () => libellesFrequents() });
+  const [recherche, setRecherche] = useState("");
+  const [choisi, setChoisi] = useState<Libelle | null>(null);
+  const q = normaliser(recherche);
+  const visibles = libelles.filter((l) => normaliser(l.libelle).includes(q)).sort((a, b) => a.libelle.localeCompare(b.libelle, "fr"));
+  return (
+    <Card withBorder>
+      <Group justify="space-between" mb="xs">
+        <Title order={4}>Libellés</Title>
+        <TextInput size="xs" leftSection={<IconSearch size={14} />} placeholder="Rechercher" aria-label="Rechercher un libellé" value={recherche} onChange={(e) => setRecherche(e.currentTarget.value)} />
+      </Group>
+      <Text size="sm" c="dimmed" mb="xs">
+        Proposés à la saisie, du plus fréquent au moins fréquent. Renommez une variante pour la regrouper avec le bon libellé.
+      </Text>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xs" verticalSpacing={0}>
+        {visibles.slice(0, 60).map((l) => (
+          <Group key={l.libelle} py={6} wrap="nowrap" style={{ borderTop: "1px solid var(--mantine-color-default-border)" }}>
+            <Text size="sm" fw={500} truncate style={{ flex: 1 }}>
+              {l.libelle}
+            </Text>
+            <Text size="sm" c="dimmed">
+              {l.nb}
+            </Text>
+            <ActionIcon variant="subtle" color="gray" aria-label={`Renommer ${l.libelle}`} onClick={() => setChoisi(l)}>
+              <IconPencil size={16} />
+            </ActionIcon>
+          </Group>
+        ))}
+      </SimpleGrid>
+      {visibles.length > 60 && (
+        <Text size="xs" c="dimmed" mt="xs">
+          {visibles.length - 60} autres : affinez la recherche.
+        </Text>
+      )}
+      <ModalRenommer libelle={choisi} libelles={libelles} onClose={() => setChoisi(null)} />
+    </Card>
+  );
+}
+
+/** Foyer, moyens et types de paiement, catégories, libellés (admin). Lecture seule pour le rôle lecture. */
 export function Parametres() {
   const ecriture = peutEcrire();
   return (
@@ -350,6 +430,7 @@ export function Parametres() {
         <Types ecriture={ecriture} />
       </SimpleGrid>
       <Categories ecriture={ecriture} />
+      {estAdmin() && <Libelles />}
     </Stack>
   );
 }

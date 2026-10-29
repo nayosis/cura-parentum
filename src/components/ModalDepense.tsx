@@ -3,7 +3,7 @@ import { ActionIcon, Alert, Box, Button, Checkbox, Chip, Group, Modal, Stack, Te
 import { notifications } from "@mantine/notifications";
 import { IconPlus, IconX } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
-import { creerDepense, derniereSaisie, majDepense, type CategorieDeDepense } from "../data/depenses";
+import { creerDepense, derniereSaisie, libellesFrequents, majDepense, type CategorieDeDepense } from "../data/depenses";
 import { creerCategorie, listeCategories, listeMoyensPaiement } from "../data/parametres";
 import type { Depense } from "../db/schema";
 import { aujourdhui } from "../lib/dates";
@@ -13,6 +13,7 @@ import { euros, lireMontant } from "../lib/montants";
 import { ecrire } from "../lib/query";
 import { ChampDate } from "./Champs";
 import { BoutonsAjout, envoyerFichiers, Vignette } from "./Justificatifs";
+import { SuggestionsLibelle } from "./SuggestionsLibelle";
 
 /** La dépense à modifier (absente : nouvelle dépense). */
 export type DepenseAModifier = Depense & { categories: CategorieDeDepense[] };
@@ -70,6 +71,7 @@ export function ModalDepense({ depense, opened, onClose }: { depense: DepenseAMo
   const { data: categories = [] } = useQuery({ queryKey: ["categories"], queryFn: () => listeCategories(), enabled: opened });
   const { data: moyens = [] } = useQuery({ queryKey: ["moyens"], queryFn: () => listeMoyensPaiement(), enabled: opened });
   const { data: derniere } = useQuery({ queryKey: ["derniereSaisie"], queryFn: () => derniereSaisie(), enabled: opened && !depense });
+  const { data: libelles = [] } = useQuery({ queryKey: ["libellesFrequents"], queryFn: () => libellesFrequents(), enabled: opened && !depense });
   const [v, setV] = useState<Saisie>(vide(null));
   const [fichiers, setFichiers] = useState<FichierEnvoye[]>([]);
   const [envoi, setEnvoi] = useState(false);
@@ -197,6 +199,14 @@ export function ModalDepense({ depense, opened, onClose }: { depense: DepenseAMo
           <TextInput label="Libellé" placeholder="Pharmacie du Centre" required value={v.libelle} onChange={(e) => setV({ ...v, libelle: e.currentTarget.value })} style={{ flexGrow: 2 }} />
           <ChampDate label="Date" required value={v.date} onChange={(d) => setV({ ...v, date: d })} />
         </Group>
+        {!depense && (
+          <SuggestionsLibelle
+            libelles={libelles}
+            saisie={v.libelle}
+            // Les catégories habituelles s'ajoutent à celles déjà cochées.
+            choisir={(l) => setV((x) => ({ ...x, libelle: l.libelle, categorieIds: [...new Set([...x.categorieIds, ...l.categorieIds])] }))}
+          />
+        )}
 
         <div>
           <Text size="sm" fw={500} mb={6}>

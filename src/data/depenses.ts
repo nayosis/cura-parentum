@@ -2,6 +2,7 @@ import { and, desc, eq, getTableColumns, isNotNull, isNull, like, or, sql, type 
 import { batch, db, newId, query, type Statement } from "../db/client";
 import { depense, justificatif, moyenPaiement, remboursement } from "../db/schema";
 import { ErreurMetier } from "../../serveur/erreurs";
+import { instantane, journaliser } from "../../serveur/journal";
 import { adminCourant, utilisateurCourant } from "../../serveur/tracabilite";
 import { DATE, instructionsJustificatifs, type FichierARattacher } from "./commun";
 import { verifierVersion, versionDe } from "./version";
@@ -64,6 +65,24 @@ export async function derniereSaisie() {
     [utilisateurCourant()],
   );
   return { moyenId: (l?.[0] as string | undefined) ?? null };
+}
+
+/**
+ * Libellés déjà saisis, du plus fréquent au moins fréquent, pour les proposer à la saisie.
+ * Majuscules et espaces autour ne comptent pas ; on garde l'écriture la plus récente et les catégories
+ * (non archivées) de la dernière dépense à ce libellé.
+ */
+export async function libellesFrequents() {
+  const lignes = await query(
+    `select libelle, n, categories from (
+       select d.libelle, count(*) over (partition by lower(trim(d.libelle))) n,
+         row_number() over (partition by lower(trim(d.libelle)) order by d.date desc, d.cree_le desc) rang,
+         (select json_group_array(c.id) from depense_categorie dc join categorie c on c.id = dc.categorie_id
+          where dc.depense_id = d.id and c.archivee = 0) categories
+       from depense d)
+     where rang = 1 order by n desc, libelle limit 500`,
+  );
+  return lignes.map(([libelle, n, categories]) => ({ libelle: String(libelle), nb: Number(n), categorieIds: JSON.parse(String(categories)) as string[] }));
 }
 
 // --- Contrôles
@@ -173,4 +192,20 @@ export async function renommerJustificatif(id: string, nom: string) {
   if (!nom.trim()) throw new ErreurMetier("Le nom est obligatoire.");
   await justificatifModifiable(id);
   await db.update(justificatif).set({ nom: nom.trim() }).where(eq(justificatif.id, id));
+}
+
+/**
+ * Corrige un libellé sur toutes les dépenses qui le portent (fautes, variantes) : admin seulement, car des dépenses
+ * remboursées peuvent être concernées. Chaque dépense retouchée a sa ligne au journal, avec la fiche avant et après.
+ */
+export async function renommerLibelle(ancien: string, nouveau: string) {
+  if (!adminCourant()) throw new ErreurMetier("Seul un admin peut renommer un libellé.", 403);
+  if (!nouveau.trim()) throw new ErreurMetier("Le libellé est obligatoire.");
+  const ids = (await query("select id from depense where lower(trim(libelle)) = lower(trim(?)) and libelle <> ?", [ancien, nouveau.trim()])).map(([id]) => String(id));
+  for (const id of ids) {
+    const avant = instantane(id);
+    await query("update depense set libelle = ? where id = ?", [nouveau.trim(), id]);
+    journaliser(utilisateurCourant() ?? "systeme", "renommerLibelle", [id], null, avant);
+  }
+  return ids.length;
 }

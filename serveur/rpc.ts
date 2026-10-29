@@ -7,16 +7,17 @@
 import * as depenses from "../src/data/depenses";
 import * as parametres from "../src/data/parametres";
 import * as remboursements from "../src/data/remboursements";
+import * as tableauDeBord from "../src/data/tableauDeBord";
 
 /** Modules exposés (même liste que le plugin Vite qui génère les talons). */
-export const MODULES_RPC = { parametres, depenses, remboursements };
+export const MODULES_RPC = { tableauDeBord, parametres, depenses, remboursements };
 
 export type Droit = "lecture" | "ecriture";
 
 /** Fonctions qui ne modifient rien. Toute autre fonction exposée est une écriture. */
 const LECTURE = new Set([
   "lireFoyer", "listeTypesPaiement", "listeMoyensPaiement", "listeCategories", "listeDepenses", "ficheDepense", "derniereSaisie",
-  "listeRemboursements", "enAttente", "ficheRemboursement", "plageProposee", "candidats",
+  "listeRemboursements", "enAttente", "ficheRemboursement", "plageProposee", "candidats", "tableauDeBord",
 ]);
 
 type Fonction = (...args: unknown[]) => unknown;

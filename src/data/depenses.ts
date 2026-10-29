@@ -12,7 +12,7 @@ export type { FichierARattacher } from "./commun";
 /** Ce que voit l'utilisateur : « à rembourser » = pas encore cochée dans un remboursement. */
 export type Statut = "toutes" | "a_rembourser" | "remboursees" | "sans_justificatif";
 
-export type Filtre = { debut?: string; fin?: string; statut?: Statut; categorieId?: string; moyenId?: string; recherche?: string };
+export type Filtre = { debut?: string; fin?: string; statut?: Statut; categorieId?: string; moyenId?: string; recherche?: string; limite?: number };
 
 const CATEGORIES = sql<string>`(select json_group_array(json_object('id', c.id, 'nom', c.nom, 'couleur', c.couleur))
   from depense_categorie dc join categorie c on c.id = dc.categorie_id where dc.depense_id = "depense"."id")`;
@@ -38,7 +38,8 @@ export async function listeDepenses(f: Filtre = {}) {
     .from(depense)
     .innerJoin(moyenPaiement, eq(moyenPaiement.id, depense.moyenId))
     .where(and(...conditions))
-    .orderBy(desc(depense.date), desc(depense.creeLe));
+    .orderBy(desc(depense.date), desc(depense.creeLe))
+    .limit(f.limite && f.limite > 0 ? f.limite : -1);
   return lignes.map((l) => ({ ...l, categories: JSON.parse(l.categories) as CategorieDeDepense[] }));
 }
 

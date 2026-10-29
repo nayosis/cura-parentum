@@ -110,6 +110,9 @@ Report automatique de l'écart. OCR des tickets.
    toutes cochées et oubliées d'avant la plage à part, montant viré et écart, justificatifs du virement, confirmation
    avant validation ; liste, fiche (dépenses couvertes, historique), correction de la date, du montant ou de la note
    par un admin ; consultation sur téléphone, création réservée à l'ordinateur.
-4. Tableau de bord : à rembourser, sans justificatif, dernier remboursement, dépensé dans l'année, par catégorie.
+4. Tableau de bord (fait) : à rembourser (depuis quand), sans justificatif (dont à rembourser), dernier remboursement et
+   son écart, dépensé dans l'année (moyenne mensuelle), par catégorie (mois ou année ; une dépense à plusieurs
+   catégories compte dans chacune), dernières dépenses, remboursements récents ; tuiles cliquables vers les listes
+   filtrées. Sur téléphone : à rembourser, alerte sans justificatif, dernières dépenses, catégories.
 5. Exports : dossier PDF par remboursement (avec annexes et historique), ZIP des justificatifs, bilan annuel.
 6. Publication : dépôt `nayosis/cura-parentum`, image ghcr.io, déploiement personnel sur `parentum.gouadon.fr`.

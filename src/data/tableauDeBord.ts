@@ -1,29 +1,9 @@
 import { query } from "../db/client";
+import { parCategorie } from "./commun";
+export type { TotalCategorie } from "./commun";
 import { aujourdhui } from "../lib/dates";
 import { listeDepenses } from "./depenses";
 import { listeRemboursements } from "./remboursements";
-
-export type TotalCategorie = { id: string | null; nom: string; couleur: string; total: number };
-
-/**
- * Dépenses par catégorie entre deux dates (incluses), de la plus grosse à la plus petite. Une dépense à plusieurs
- * catégories compte dans chacune (la somme des catégories peut donc dépasser le total) ; sans catégorie : à part.
- */
-async function parCategorie(debut: string, fin: string): Promise<TotalCategorie[]> {
-  const lignes = await query(
-    `select c.id, c.nom, c.couleur, sum(d.montant) from depense d
-       join depense_categorie dc on dc.depense_id = d.id join categorie c on c.id = dc.categorie_id
-     where d.date between ?1 and ?2 group by c.id
-     union all
-     select null, 'Sans catégorie', 'gray', sum(d.montant) from depense d
-     where d.date between ?1 and ?2 and not exists (select 1 from depense_categorie dc where dc.depense_id = d.id)
-     having count(*) > 0`,
-    [debut, fin],
-  );
-  return lignes
-    .map(([id, nom, couleur, total]) => ({ id: id as string | null, nom: nom as string, couleur: couleur as string, total: Number(total) }))
-    .sort((a, b) => b.total - a.total);
-}
 
 /**
  * Le tableau de bord : ce qui attend d'être remboursé, les dépenses sans justificatif, le dernier remboursement,

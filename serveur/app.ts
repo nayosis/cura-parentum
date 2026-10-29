@@ -11,6 +11,7 @@ import { baseCourante } from "./base";
 import { diffuser, fluxEvenements } from "./evenements";
 import { cibleDesArguments, instantane, journaliser, lireJournal } from "./journal";
 import { etatMiseAJour } from "./miseAJour";
+import { bilanPdf, dossierRemboursement, zipRemboursement } from "./exports";
 import { cheminSauvegarde, etatSauvegardeAuto, listeSauvegardes, nomSauvegardeValide, sauvegardeDeNuit } from "./sauvegardeAuto";
 import { SAUVEGARDES_CONSERVEES } from "./config";
 import { contexteRequete } from "./tracabilite";
@@ -30,6 +31,12 @@ const EXTENSIONS: Record<string, string> = {
   "image/gif": "gif",
 };
 const TAILLE_MAX_FICHIER = 50 * 1024 * 1024;
+
+/** Fichier à télécharger (jamais mis en cache : il reflète l'état du moment). */
+const telechargement = ({ octets, nom }: { octets: Uint8Array; nom: string }, type: string) =>
+  new Response(new Blob([octets as Uint8Array<ArrayBuffer>]), {
+    headers: { "content-type": type, "content-disposition": `attachment; filename="${nom}"`, "cache-control": "no-store" },
+  });
 
 export function creerApp() {
   return (
@@ -135,6 +142,20 @@ export function creerApp() {
         },
         { query: t.Object({ utilisateur: t.Optional(t.String()), depuis: t.Optional(t.String()), avant: t.Optional(t.String()), cible: t.Optional(t.String()) }) },
       )
+
+      // --- Exports pour justifier (rôle lecture compris) : dossier PDF et ZIP d'un remboursement, bilan annuel
+      .get("/api/exports/remboursements/:id/dossier", async ({ params, utilisateur }) => {
+        const u = exiger(utilisateur, "lecture");
+        return telechargement(await dossierRemboursement(params.id, u.email), "application/pdf");
+      })
+      .get("/api/exports/remboursements/:id/justificatifs", async ({ params, utilisateur }) => {
+        const u = exiger(utilisateur, "lecture");
+        return telechargement(await zipRemboursement(params.id, u.email), "application/zip");
+      })
+      .get("/api/exports/bilan/:annee", async ({ params, utilisateur }) => {
+        const u = exiger(utilisateur, "lecture");
+        return telechargement(await bilanPdf(Number(params.annee), u.email), "application/pdf");
+      })
 
       // --- Sauvegardes : téléchargement (admins), restauration (super admin)
       .get("/api/sauvegarde/infos", ({ utilisateur }) => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Alert, Anchor, Button, Card, Group, Modal, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Title, UnstyledButton } from "@mantine/core";
-import { IconArrowLeft, IconChevronRight, IconPaperclip, IconPencil } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronRight, IconDownload, IconFileZip, IconPaperclip, IconPencil } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ficheRemboursement, majRemboursement } from "../data/remboursements";
@@ -98,15 +98,25 @@ export function FicheRemboursement() {
             Dépenses du {dateLisible(r.debut, { day: "numeric", month: "long" })} au {dateLisible(r.fin)}
           </Title>
         </div>
-        {estAdmin() && !telephone && (
-          <Button variant="default" leftSection={<IconPencil size={16} />} onClick={() => setCorrection(true)}>
-            Corriger
-          </Button>
+        {!telephone && (
+          <Group gap="xs">
+            <Button component="a" href={`/api/exports/remboursements/${r.id}/dossier`} download leftSection={<IconDownload size={16} />}>
+              Dossier PDF
+            </Button>
+            <Button component="a" href={`/api/exports/remboursements/${r.id}/justificatifs`} download variant="default" leftSection={<IconFileZip size={16} />}>
+              ZIP des justificatifs
+            </Button>
+            {estAdmin() && (
+              <Button variant="subtle" leftSection={<IconPencil size={16} />} onClick={() => setCorrection(true)}>
+                Corriger
+              </Button>
+            )}
+          </Group>
         )}
       </Group>
 
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
-        <Chiffre label={`Total des ${r.depenses.length} dépenses`} valeur={euros(r.total)} />
+        <Chiffre label={r.depenses.length > 1 ? `Total des ${r.depenses.length} dépenses` : "Total de la dépense"} valeur={euros(r.total)} />
         <Chiffre label="Montant viré" valeur={euros(r.montantVire)} />
         <Chiffre label="Écart" valeur={r.ecart === 0 ? "aucun" : `${r.ecart > 0 ? "+" : ""}${euros(r.ecart)}`} accent={r.ecart !== 0} />
         <Chiffre label="Plage" valeur={`${dateLisible(r.debut, { day: "2-digit", month: "2-digit" })} → ${dateLisible(r.fin, { day: "2-digit", month: "2-digit" })}`} />

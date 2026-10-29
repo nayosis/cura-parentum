@@ -3,7 +3,7 @@ import {
   Alert, AppShell, Badge, Box, Burger, Button, Divider, Drawer, Group, Menu, Modal, NavLink, PasswordInput, Stack, Text, UnstyledButton, SegmentedControl, useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconAdjustmentsHorizontal, IconBrandGithub, IconChevronUp, IconDatabaseExport, IconDots, IconHistory, IconKey, IconLayoutDashboard, IconLogout, IconPlus, IconReceipt, IconTransfer, IconUserCog } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconBrandGithub, IconChartBar, IconChevronUp, IconDatabaseExport, IconDots, IconHistory, IconKey, IconLayoutDashboard, IconLogout, IconPlus, IconReceipt, IconTransfer, IconUserCog } from "@tabler/icons-react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { appelApi } from "../lib/rpc";
 import { deconnexion, estAdmin, LIBELLES_ROLES, peutEcrire, utilisateur } from "../lib/session";
@@ -22,6 +22,7 @@ const ENTREES: Entree[] = [
   { to: "/", label: "Tableau de bord", court: "Accueil", barre: true, icone: IconLayoutDashboard, actif: (p) => p === "/" },
   { to: "/depenses", label: "Dépenses", barre: true, icone: IconReceipt, actif: (p) => p.startsWith("/depenses") },
   { to: "/remboursements", label: "Remboursements", court: "Rembours.", barre: true, icone: IconTransfer, actif: (p) => p.startsWith("/remboursements") },
+  { to: "/bilan", label: "Bilan annuel", icone: IconChartBar, actif: (p) => p.startsWith("/bilan") },
   { to: "/parametres", label: "Paramètres", icone: IconAdjustmentsHorizontal, actif: (p) => p.startsWith("/parametres") },
 ];
 

@@ -41,7 +41,16 @@ export const baseCourante = () => {
  */
 export function ouvrirBase(chemin: string, migrations: string) {
   const base = new Database(chemin, { create: true });
-  base.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+  // Au redémarrage (bun --watch, surtout sous Windows), l'ancien processus peut tenir la base encore un instant.
+  for (let essai = 1; ; essai++) {
+    try {
+      base.exec("PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
+      break;
+    } catch (e) {
+      if (essai >= 50 || !String((e as { code?: string }).code).startsWith("SQLITE_BUSY")) throw e;
+      Bun.sleepSync(100);
+    }
+  }
   const appliquees = migrer(base, migrations);
   installerTracabilite(base);
   installerExecuteur(executeurSqlite(base, true));

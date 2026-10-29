@@ -4,20 +4,21 @@
  * Les lectures sont ouvertes à tout compte connecté (rôle lecture compris), les écritures au rôle écriture ;
  * seules les écritures sont journalisées et diffusées.
  */
+import * as bilan from "../src/data/bilan";
 import * as depenses from "../src/data/depenses";
 import * as parametres from "../src/data/parametres";
 import * as remboursements from "../src/data/remboursements";
 import * as tableauDeBord from "../src/data/tableauDeBord";
 
 /** Modules exposés (même liste que le plugin Vite qui génère les talons). */
-export const MODULES_RPC = { tableauDeBord, parametres, depenses, remboursements };
+export const MODULES_RPC = { tableauDeBord, parametres, depenses, remboursements, bilan };
 
 export type Droit = "lecture" | "ecriture";
 
 /** Fonctions qui ne modifient rien. Toute autre fonction exposée est une écriture. */
 const LECTURE = new Set([
   "lireFoyer", "listeTypesPaiement", "listeMoyensPaiement", "listeCategories", "listeDepenses", "ficheDepense", "derniereSaisie",
-  "listeRemboursements", "enAttente", "ficheRemboursement", "plageProposee", "candidats", "tableauDeBord",
+  "listeRemboursements", "enAttente", "ficheRemboursement", "plageProposee", "candidats", "tableauDeBord", "bilanAnnuel", "anneesDisponibles",
 ]);
 
 type Fonction = (...args: unknown[]) => unknown;

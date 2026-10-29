@@ -114,5 +114,10 @@ Report automatique de l'écart. OCR des tickets.
    son écart, dépensé dans l'année (moyenne mensuelle), par catégorie (mois ou année ; une dépense à plusieurs
    catégories compte dans chacune), dernières dépenses, remboursements récents ; tuiles cliquables vers les listes
    filtrées. Sur téléphone : à rembourser, alerte sans justificatif, dernières dépenses, catégories.
-5. Exports : dossier PDF par remboursement (avec annexes et historique), ZIP des justificatifs, bilan annuel.
+5. Exports (fait) : dossier PDF par remboursement (récapitulatif, tableau des dépenses avec numéros d'annexe, notes,
+   modifications faites après la validation, puis chaque justificatif en annexe : photo sur sa page, orientation de
+   l'appareil respectée, pages des PDF recopiées ; un fichier illisible a une page qui le dit) ; ZIP des justificatifs
+   (fichiers renommés « date_libellé_montant », depenses.csv en UTF-8 pour Excel, le dossier PDF) ; bilan annuel à
+   l'écran et en PDF (par mois, par catégorie, par moyen de paiement, remboursements et écart cumulé). Téléchargeables
+   par tous les rôles, rôle lecture compris ; réservés à l'ordinateur. Bibliothèque : pdf-lib.
 6. Publication : dépôt `nayosis/cura-parentum`, image ghcr.io, déploiement personnel sur `parentum.gouadon.fr`.

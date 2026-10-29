@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { FournisseurSaisie } from "./lib/saisie";
 import { SurOrdinateur } from "./components/SurOrdinateur";
 import { Accueil } from "./pages/Accueil";
+import { Bilan } from "./pages/Bilan";
 import { Depenses } from "./pages/Depenses";
 import { FicheDepense } from "./pages/FicheDepense";
 import { FicheRemboursement } from "./pages/FicheRemboursement";
@@ -84,6 +85,12 @@ const nouveauRemboursement = createRoute({
     if (!peutEcrire()) throw redirect({ to: "/remboursements" });
   },
 });
+export const bilanRoute = createRoute({
+  getParentRoute: () => application,
+  path: "/bilan",
+  component: surOrdinateur(Bilan, "Bilan annuel"),
+  validateSearch: (s: Record<string, unknown>): { annee?: number } => (Number.isInteger(Number(s.annee)) && Number(s.annee) > 1900 ? { annee: Number(s.annee) } : {}),
+});
 export const ficheRemboursementRoute = createRoute({ getParentRoute: () => application, path: "/remboursements/$id", component: FicheRemboursement });
 const parametres = createRoute({ getParentRoute: () => application, path: "/parametres", component: surOrdinateur(Parametres, "Paramètres") });
 const sauvegarde = createRoute({ getParentRoute: () => application, path: "/sauvegarde", component: surOrdinateur(Sauvegarde, "Sauvegarde"), beforeLoad: reserveAdmin });
@@ -91,7 +98,7 @@ const comptes = createRoute({ getParentRoute: () => application, path: "/comptes
 const journal = createRoute({ getParentRoute: () => application, path: "/journal", component: surOrdinateur(Journal, "Journal"), beforeLoad: reserveAdmin });
 
 export const router = createRouter({
-  routeTree: racine.addChildren([connexionRoute, lienRoute, application.addChildren([accueilRoute, depensesRoute, ficheDepenseRoute, remboursements, nouveauRemboursement, ficheRemboursementRoute, parametres, sauvegarde, comptes, journal])]),
+  routeTree: racine.addChildren([connexionRoute, lienRoute, application.addChildren([accueilRoute, depensesRoute, ficheDepenseRoute, remboursements, nouveauRemboursement, ficheRemboursementRoute, bilanRoute, parametres, sauvegarde, comptes, journal])]),
   history: createBrowserHistory(),
 });
 

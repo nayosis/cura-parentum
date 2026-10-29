@@ -9,7 +9,7 @@ import { executerRpc, FONCTIONS } from "./rpc";
 import { fluxSauvegarde, manifeste, nomSauvegarde, restaurer, tailleDonnees } from "./sauvegarde";
 import { baseCourante } from "./base";
 import { diffuser, fluxEvenements } from "./evenements";
-import { journaliser, lireJournal } from "./journal";
+import { cibleDesArguments, instantane, journaliser, lireJournal } from "./journal";
 import { etatMiseAJour } from "./miseAJour";
 import { cheminSauvegarde, etatSauvegardeAuto, listeSauvegardes, nomSauvegardeValide, sauvegardeDeNuit } from "./sauvegardeAuto";
 import { SAUVEGARDES_CONSERVEES } from "./config";
@@ -80,9 +80,13 @@ export function creerApp() {
           if (f.droit === "ecriture") exiger(u, "ecriture");
           // Identifiant de l'onglet appelant : il ne se recharge pas pour ses propres écritures.
           const client = request.headers.get("x-client") ?? undefined;
-          const resultat = await contexteRequete.run({ utilisateur: u.email, client }, () => executerRpc(params.nom, body.args));
+          // La fiche visée, telle qu'elle était avant l'écriture (pour le journal).
+          const cible = f.droit === "ecriture" ? cibleDesArguments(body.args) : null;
+          const avant = cible ? instantane(cible) : null;
+          const admin = u.super || u.role === "admin";
+          const resultat = await contexteRequete.run({ utilisateur: u.email, admin, client }, () => executerRpc(params.nom, body.args));
           if (f.droit === "ecriture") {
-            journaliser(u.email, params.nom, body.args, resultat);
+            journaliser(u.email, params.nom, body.args, resultat, avant);
             diffuser({ type: "modification", par: u.email, fonction: params.nom, client });
           }
           return { resultat };
@@ -125,9 +129,11 @@ export function creerApp() {
         "/api/journal",
         ({ utilisateur, query }) => {
           exiger(utilisateur, "admin");
-          return { lignes: lireJournal({ utilisateur: query.utilisateur, depuis: query.depuis, avant: query.avant ? Number(query.avant) : undefined }) };
+          return {
+            lignes: lireJournal({ utilisateur: query.utilisateur, depuis: query.depuis, avant: query.avant ? Number(query.avant) : undefined, cible: query.cible }),
+          };
         },
-        { query: t.Object({ utilisateur: t.Optional(t.String()), depuis: t.Optional(t.String()), avant: t.Optional(t.String()) }) },
+        { query: t.Object({ utilisateur: t.Optional(t.String()), depuis: t.Optional(t.String()), avant: t.Optional(t.String()), cible: t.Optional(t.String()) }) },
       )
 
       // --- Sauvegardes : téléchargement (admins), restauration (super admin)

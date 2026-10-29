@@ -1,11 +1,12 @@
 import { Button, Card, Group, Stack, Text, ThemeIcon, Title } from "@mantine/core";
-import { IconAdjustmentsHorizontal, IconHeart } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconHeart, IconPlus } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { lireFoyer, listeMoyensPaiement } from "../data/parametres";
 import { AvisMiseAJour } from "../components/MiseAJour";
 import { peutEcrire } from "../lib/session";
 import { useEcran } from "../lib/ecran";
+import { useNouvelleDepense } from "../lib/saisie";
 
 /** « Mardi 27 octobre 2026 ». */
 function aujourdhuiLong() {
@@ -22,16 +23,24 @@ export function Accueil() {
   const { data: foyer } = useQuery({ queryKey: ["foyer"], queryFn: () => lireFoyer() });
   const { data: moyens } = useQuery({ queryKey: ["moyens"], queryFn: () => listeMoyensPaiement() });
   const aConfigurer = moyens !== undefined && moyens.length === 0;
+  const nouvelle = useNouvelleDepense();
 
   return (
     <Stack p={telephone ? "md" : "xl"} gap="lg" maw={1100}>
       <AvisMiseAJour />
-      <div>
-        <Title order={2}>{foyer?.nom ? `Pour ${foyer.nom}` : "Tableau de bord"}</Title>
-        <Text c="dimmed" size="sm">
-          {aujourdhuiLong()}
-        </Text>
-      </div>
+      <Group justify="space-between">
+        <div>
+          <Title order={2}>{foyer?.nom ? `Pour ${foyer.nom}` : "Tableau de bord"}</Title>
+          <Text c="dimmed" size="sm">
+            {aujourdhuiLong()}
+          </Text>
+        </div>
+        {peutEcrire() && !telephone && !aConfigurer && (
+          <Button leftSection={<IconPlus size={16} />} onClick={nouvelle}>
+            Nouvelle dépense
+          </Button>
+        )}
+      </Group>
       {aConfigurer && (
         <Card withBorder padding="lg">
           <Group align="flex-start" wrap="nowrap">

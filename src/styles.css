@@ -72,3 +72,9 @@ body,
 .mantine-Card-root {
   background-color: var(--t-surface);
 }
+
+/* Montant de la saisie : en grand, même sur écran tactile (plus de 16 px : pas d'agrandissement par Safari). */
+.champ-montant input,
+.champ-montant input.mantine-Input-input {
+  font-size: 40px !important;
+}

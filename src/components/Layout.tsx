@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import {
   Alert, AppShell, Badge, Box, Burger, Button, Divider, Drawer, Group, Menu, Modal, NavLink, PasswordInput, Stack, Text, UnstyledButton, SegmentedControl, useMantineColorScheme,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconAdjustmentsHorizontal, IconBrandGithub, IconChevronUp, IconDatabaseExport, IconDots, IconHistory, IconKey, IconLayoutDashboard, IconLogout, IconUserCog } from "@tabler/icons-react";
+import { IconAdjustmentsHorizontal, IconBrandGithub, IconChevronUp, IconDatabaseExport, IconDots, IconHistory, IconKey, IconLayoutDashboard, IconLogout, IconPlus, IconReceipt, IconUserCog } from "@tabler/icons-react";
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { appelApi } from "../lib/rpc";
-import { deconnexion, estAdmin, LIBELLES_ROLES, utilisateur } from "../lib/session";
+import { deconnexion, estAdmin, LIBELLES_ROLES, peutEcrire, utilisateur } from "../lib/session";
+import { useNouvelleDepense } from "../lib/saisie";
 import { useEvenements } from "../hooks/useEvenements";
 import { useEcran } from "../lib/ecran";
 import { configuration } from "../lib/configuration";
@@ -14,11 +15,12 @@ import { DEPOT_URL } from "../lib/versions";
 import { BadgeMiseAJour } from "./MiseAJour";
 import { Logo } from "./Logo";
 
-/** `court` : libellé de la barre du bas, sur téléphone. */
-type Entree = { to: string; label: string; court?: string; icone: typeof IconLayoutDashboard; actif: (p: string) => boolean };
+/** `court` : libellé de la barre du bas, sur téléphone ; `barre` : y figure (le reste est dans « Plus »). */
+type Entree = { to: string; label: string; court?: string; barre?: boolean; icone: typeof IconLayoutDashboard; actif: (p: string) => boolean };
 
 const ENTREES: Entree[] = [
-  { to: "/", label: "Tableau de bord", court: "Accueil", icone: IconLayoutDashboard, actif: (p) => p === "/" },
+  { to: "/", label: "Tableau de bord", court: "Accueil", barre: true, icone: IconLayoutDashboard, actif: (p) => p === "/" },
+  { to: "/depenses", label: "Dépenses", barre: true, icone: IconReceipt, actif: (p) => p.startsWith("/depenses") },
   { to: "/parametres", label: "Paramètres", icone: IconAdjustmentsHorizontal, actif: (p) => p.startsWith("/parametres") },
 ];
 
@@ -161,8 +163,10 @@ function Liens({ chemin, surClic }: { chemin: string; surClic?: () => void }) {
   );
 }
 
-/** Téléphone : les pages les plus utiles en bas de l'écran, le reste dans « Plus ». */
+/** Téléphone : les pages les plus utiles en bas de l'écran, la saisie au milieu, le reste dans « Plus ». */
 function BarreBas({ chemin, onPlus }: { chemin: string; onPlus: () => void }) {
+  const nouvelle = useNouvelleDepense();
+  const entrees = ENTREES.filter((e) => e.barre);
   const bouton = (contenu: React.ReactNode, actif: boolean) => (
     <Stack gap={2} align="center" c={actif ? "prune.6" : "dimmed"} py={6} style={{ flex: 1 }}>
       {contenu}
@@ -175,16 +179,32 @@ function BarreBas({ chemin, onPlus }: { chemin: string; onPlus: () => void }) {
       bg="var(--t-surface)"
       style={{ borderTop: "1px solid var(--mantine-color-default-border)", paddingBottom: "env(safe-area-inset-bottom)", flexShrink: 0 }}
     >
-      {ENTREES.map((e) => (
-        <UnstyledButton key={e.to} component={Link} to={e.to} style={{ flex: 1 }}>
-          {bouton(
-            <>
-              <e.icone size={22} />
-              <Text size="xs">{e.court ?? e.label}</Text>
-            </>,
-            e.actif(chemin),
+      {entrees.map((e, i) => (
+        <Fragment key={e.to}>
+          <UnstyledButton component={Link} to={e.to} style={{ flex: 1 }}>
+            {bouton(
+              <>
+                <e.icone size={22} />
+                <Text size="xs">{e.court ?? e.label}</Text>
+              </>,
+              e.actif(chemin),
+            )}
+          </UnstyledButton>
+          {i === entrees.length - 1 && peutEcrire() && (
+            <UnstyledButton onClick={nouvelle} aria-label="Nouvelle dépense" style={{ flex: 1, display: "flex", justifyContent: "center" }}>
+              <Box
+                w={56}
+                h={56}
+                mt={-20}
+                bg="prune.6"
+                c="white"
+                style={{ borderRadius: 28, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(122, 59, 94, 0.35)" }}
+              >
+                <IconPlus size={28} />
+              </Box>
+            </UnstyledButton>
           )}
-        </UnstyledButton>
+        </Fragment>
       ))}
       <UnstyledButton onClick={onPlus} style={{ flex: 1 }}>
         {bouton(

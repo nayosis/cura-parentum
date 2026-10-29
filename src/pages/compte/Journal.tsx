@@ -2,11 +2,18 @@ import { useState } from "react";
 import { Button, Code, Group, ScrollArea, SegmentedControl, Select, Stack, Table, Text, Title } from "@mantine/core";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { appelApi } from "../../lib/rpc";
+import { DiffJournal } from "../../components/DiffJournal";
 
-type Ligne = { id: number; quand: string; utilisateur: string; fonction: string; cible: string | null; resume: string | null };
+type Ligne = { id: number; quand: string; utilisateur: string; fonction: string; cible: string | null; resume: string | null; avant: string | null; apres: string | null };
 
 /** Libellés lisibles des fonctions d'écriture ; les autres sont affichées telles quelles. */
 const LIBELLES: Record<string, string> = {
+  creerDepense: "Nouvelle dépense",
+  majDepense: "Dépense modifiée",
+  supprimerDepense: "Dépense supprimée",
+  ajouterJustificatifs: "Justificatif ajouté",
+  retirerJustificatif: "Justificatif retiré",
+  renommerJustificatif: "Justificatif renommé",
   majFoyer: "Foyer modifié",
   creerTypePaiement: "Nouveau type de paiement",
   majTypePaiement: "Type de paiement modifié",
@@ -95,7 +102,9 @@ export function Journal() {
                   </Text>
                 </Table.Td>
                 <Table.Td>
-                  {l.resume && l.resume !== "[]" && (
+                  {l.avant || l.apres ? (
+                    <DiffJournal avant={l.avant} apres={l.apres} />
+                  ) : l.resume && l.resume !== "[]" && (
                     <Code fz="xs" style={{ wordBreak: "break-all", whiteSpace: "pre-wrap" }}>
                       {l.resume}
                     </Code>

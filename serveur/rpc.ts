@@ -4,15 +4,16 @@
  * Les lectures sont ouvertes à tout compte connecté (rôle lecture compris), les écritures au rôle écriture ;
  * seules les écritures sont journalisées et diffusées.
  */
+import * as depenses from "../src/data/depenses";
 import * as parametres from "../src/data/parametres";
 
 /** Modules exposés (même liste que le plugin Vite qui génère les talons). */
-export const MODULES_RPC = { parametres };
+export const MODULES_RPC = { parametres, depenses };
 
 export type Droit = "lecture" | "ecriture";
 
 /** Fonctions qui ne modifient rien. Toute autre fonction exposée est une écriture. */
-const LECTURE = new Set(["lireFoyer", "listeTypesPaiement", "listeMoyensPaiement", "listeCategories"]);
+const LECTURE = new Set(["lireFoyer", "listeTypesPaiement", "listeMoyensPaiement", "listeCategories", "listeDepenses", "ficheDepense", "derniereSaisie"]);
 
 type Fonction = (...args: unknown[]) => unknown;
 

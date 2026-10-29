@@ -101,8 +101,11 @@ Report automatique de l'écart. OCR des tickets.
 
 1. Socle (fait) : infrastructure reprise de Custos Domus (comptes, sauvegarde, journal, mise à jour), rôle lecture,
    schéma V1 et valeurs de départ, thème prune, page Paramètres (foyer, moyens et types de paiement, catégories).
-2. Dépenses et justificatifs : liste (filtres, statut, sans justificatif), fiche, saisie rapide sur téléphone avec
-   photo, avoirs, catégorie créée à la volée, verrouillage des dépenses remboursées ; journal avant / après.
+2. Dépenses et justificatifs (fait) : liste (filtres dans l'adresse : mois, statut, catégorie, moyen, recherche), fiche,
+   saisie rapide (bouton « + » du téléphone, photo directe, dernier moyen de paiement proposé, « Et une autre »),
+   avoirs, catégorie créée à la volée, verrouillage des dépenses remboursées (un justificatif peut toujours s'y
+   ajouter) ; supprimer une dépense détache et archive ses justificatifs ; journal avant / après, historique de la
+   dépense sur sa fiche (admins).
 3. Remboursements : sélection des dépenses (plage + oubliées), montant viré et écart, justificatifs, liste et détail
    (lecture sur téléphone).
 4. Tableau de bord : à rembourser, sans justificatif, dernier remboursement, dépensé dans l'année, par catégorie.

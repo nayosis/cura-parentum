@@ -91,7 +91,7 @@ export function creerApp() {
           const cible = f.droit === "ecriture" ? cibleDesArguments(body.args) : null;
           const avant = cible ? instantane(cible) : null;
           const admin = u.super || u.role === "admin";
-          const resultat = await contexteRequete.run({ utilisateur: u.email, admin, client }, () => executerRpc(params.nom, body.args));
+          const resultat = await contexteRequete.run({ utilisateur: u.email, admin, superAdmin: u.super, client }, () => executerRpc(params.nom, body.args));
           if (f.droit === "ecriture") {
             journaliser(u.email, params.nom, body.args, resultat, avant);
             diffuser({ type: "modification", par: u.email, fonction: params.nom, client });

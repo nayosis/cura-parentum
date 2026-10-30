@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Alert, Anchor, Button, Card, Group, Modal, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Title, UnstyledButton } from "@mantine/core";
-import { IconArrowLeft, IconChevronRight, IconDownload, IconFileZip, IconPaperclip, IconPencil } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronRight, IconDownload, IconFileZip, IconPaperclip, IconPencil, IconTrash } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ficheRemboursement, majRemboursement } from "../data/remboursements";
+import { ficheRemboursement, majRemboursement, supprimerRemboursement } from "../data/remboursements";
 import { ChampDate } from "../components/Champs";
 import { Historique } from "../components/Historique";
 import { Justificatifs } from "../components/Justificatifs";
@@ -11,7 +11,8 @@ import { dateLisible } from "../lib/dates";
 import { useEcran } from "../lib/ecran";
 import { euros, lireMontant } from "../lib/montants";
 import { ecrire } from "../lib/query";
-import { estAdmin, peutEcrire } from "../lib/session";
+import { modals } from "@mantine/modals";
+import { estAdmin, estSuperAdmin, peutEcrire } from "../lib/session";
 import { ficheRemboursementRoute } from "../router";
 import { libelleEcart } from "./NouveauRemboursement";
 
@@ -80,6 +81,32 @@ export function FicheRemboursement() {
       </Stack>
     );
   if (!r) return null;
+
+  const supprimer = () =>
+    modals.openConfirmModal({
+      title: "Supprimer ce remboursement ?",
+      children: (
+        <Stack gap="xs">
+          <Text size="sm">
+            {r.depenses.length > 1
+              ? `Ses ${r.depenses.length} dépenses repassent « à rembourser » et redeviennent modifiables (dates comprises).`
+              : "Sa dépense repasse « à rembourser » et redevient modifiable (date comprise)."}{" "}
+            Ses justificatifs sont archivés.
+          </Text>
+          <Text size="sm">
+            Le virement de {euros(r.montantVire)} du {dateLisible(r.dateVirement)} ne sera plus justifié : refaites un remboursement avec les dépenses corrigées.
+          </Text>
+          <Text size="sm" c="dimmed">
+            Le journal garde la fiche entière avant suppression.
+          </Text>
+        </Stack>
+      ),
+      labels: { confirm: "Supprimer", cancel: "Annuler" },
+      confirmProps: { color: "red" },
+      onConfirm: async () => {
+        if ((await ecrire(() => supprimerRemboursement(r.id))) !== undefined) naviguer({ to: "/remboursements" });
+      },
+    });
   const ouvrir = (depense: string) => naviguer({ to: "/depenses/$id", params: { id: depense } });
 
   return (
@@ -109,6 +136,11 @@ export function FicheRemboursement() {
             {estAdmin() && (
               <Button variant="subtle" leftSection={<IconPencil size={16} />} onClick={() => setCorrection(true)}>
                 Corriger
+              </Button>
+            )}
+            {estSuperAdmin() && (
+              <Button variant="subtle" color="red" leftSection={<IconTrash size={16} />} onClick={supprimer}>
+                Supprimer
               </Button>
             )}
           </Group>

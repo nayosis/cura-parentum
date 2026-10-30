@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ActionIcon, Alert, Box, Button, Checkbox, Chip, Group, Modal, Stack, Text, TextInput, Textarea } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconCheck, IconPlus, IconX } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { creerDepense, derniereSaisie, libellesFrequents, majDepense, type CategorieDeDepense } from "../data/depenses";
 import { creerCategorie, listeCategories, listeMoyensPaiement } from "../data/parametres";
@@ -247,16 +247,29 @@ export function ModalDepense({ depense, opened, onClose }: { depense: DepenseAMo
 
         <Textarea label="Note" placeholder="Facultatif" autosize minRows={1} value={v.note} onChange={(e) => setV({ ...v, note: e.currentTarget.value })} />
 
-        <Group grow>
+        {/* Saisie à la suite : l'action la plus fréquente est la plus visible ; Annuler, en gris, ferme sans rien enregistrer. */}
+        <Stack gap="xs">
           {!depense && (
-            <Button variant="default" size={telephone ? "lg" : "md"} onClick={() => enregistrer(true)} disabled={!valide || envoi} loading={enCours}>
-              {telephone ? "Et une autre" : "Enregistrer + autre"}
+            <Button size={telephone ? "lg" : "md"} leftSection={<IconPlus size={18} />} onClick={() => enregistrer(true)} disabled={!valide || envoi} loading={enCours}>
+              Enregistrer et saisir la suivante
             </Button>
           )}
-          <Button size={telephone ? "lg" : "md"} onClick={() => enregistrer(false)} disabled={!valide || envoi} loading={enCours}>
-            Enregistrer
-          </Button>
-        </Group>
+          <Group grow>
+            <Button variant="default" c="dimmed" size={telephone ? "lg" : "md"} onClick={onClose}>
+              Annuler
+            </Button>
+            <Button
+              variant={depense ? "filled" : "outline"}
+              size={telephone ? "lg" : "md"}
+              leftSection={<IconCheck size={18} />}
+              onClick={() => enregistrer(false)}
+              disabled={!valide || envoi}
+              loading={enCours}
+            >
+              {depense ? "Enregistrer" : "Enregistrer et fermer"}
+            </Button>
+          </Group>
+        </Stack>
       </Stack>
     </Modal>
   );

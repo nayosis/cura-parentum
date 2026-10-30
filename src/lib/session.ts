@@ -9,6 +9,7 @@ let moi: Moi | null = null;
 export const utilisateur = () => moi;
 export const estAdmin = () => !!moi && (moi.super || moi.role === "admin");
 /** Le rôle lecture consulte tout mais ne modifie rien : les boutons d'écriture sont masqués. */
+export const estSuperAdmin = () => !!moi?.super;
 export const peutEcrire = () => !!moi && (moi.super || moi.role !== "lecture");
 
 export const LIBELLES_ROLES: Record<Role, string> = { lecture: "Lecture", ecriture: "Écriture", admin: "Admin" };

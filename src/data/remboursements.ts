@@ -2,7 +2,7 @@ import { desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { batch, db, newId, query } from "../db/client";
 import { depense, justificatif, moyenPaiement, remboursement } from "../db/schema";
 import { ErreurMetier } from "../../serveur/erreurs";
-import { adminCourant } from "../../serveur/tracabilite";
+import { adminCourant, superAdminCourant } from "../../serveur/tracabilite";
 import { aujourdhui } from "../lib/dates";
 import { DATE, instructionsJustificatifs, type FichierARattacher } from "./commun";
 import { verifierVersion, versionDe } from "./version";
@@ -145,4 +145,19 @@ export async function majRemboursement(id: string, patch: { dateVirement?: strin
   if (patch.note !== undefined) valeurs.note = patch.note?.trim() || null;
   if (Object.keys(valeurs).length) await db.update(remboursement).set(valeurs).where(eq(remboursement.id, id));
   return versionDe("remboursement", id);
+}
+
+/**
+ * Supprime un remboursement (super admin seulement, pour réparer une erreur de saisie) : ses dépenses repassent
+ * « à rembourser » et redeviennent modifiables, ses justificatifs sont archivés (jamais effacés). Le journal garde
+ * la fiche entière d'avant la suppression, avec la liste des dépenses qu'il couvrait.
+ */
+export async function supprimerRemboursement(id: string) {
+  if (!superAdminCourant()) throw new ErreurMetier("Seul le super admin peut supprimer un remboursement.", 403);
+  if (!(await query("select 1 from remboursement where id = ?", [id])).length) throw new ErreurMetier("Remboursement introuvable.", 404);
+  await batch([
+    { sql: "update depense set remboursement_id = null where remboursement_id = ?", params: [id] },
+    { sql: "update justificatif set remboursement_id = null, archive = 1 where remboursement_id = ?", params: [id] },
+    { sql: "delete from remboursement where id = ?", params: [id] },
+  ]);
 }

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { query } from "../src/db/client";
 import { SUPER, serveurDeTest } from "./outils-serveur";
 
 const s = await serveurDeTest();
@@ -104,5 +105,28 @@ describe("remboursements", () => {
     const lecteur = await s.compte("lecteur-remb@famille.fr", "lecture");
     expect((await appel("ficheRemboursement", [r.id], lecteur.cookie)).statut).toBe(200);
     expect((await appel("creerRemboursement", [{ dateVirement: "2026-11-30", debut: "2026-11-01", fin: "2026-11-30", montantVire: 420, depenseIds: [apres] }], lecteur.cookie)).statut).toBe(403);
+  });
+});
+
+describe("suppression d'un remboursement", () => {
+  test("super admin seulement : dépenses libérées et de nouveau modifiables, justificatifs archivés, fiche gardée au journal", async () => {
+    const d = await ok("creerDepense", { date: "2027-01-05", libelle: "Erreur d'année", montant: 1500, moyenId: cb });
+    const releve = await envoyer();
+    const r = await ok("creerRemboursement", { dateVirement: "2027-02-01", debut: "2027-01-01", fin: "2027-01-31", montantVire: 1500, depenseIds: [d], justificatifs: [releve] });
+    const admin = await s.compte("admin-suppression@famille.fr", "admin");
+    const ecrivain = await s.compte("ecrivain-suppression@famille.fr", "ecriture");
+    expect((await appel("supprimerRemboursement", [r], admin.cookie)).statut).toBe(403);
+    expect((await appel("majDepense", [d, { date: "2026-01-05" }], ecrivain.cookie)).statut).toBe(403);
+
+    await ok("supprimerRemboursement", r);
+    expect((await appel("ficheRemboursement", [r])).statut).toBe(404);
+    expect((await ok("ficheDepense", d)).remboursementId).toBeNull();
+    expect((await appel("majDepense", [d, { date: "2026-01-05" }], ecrivain.cookie)).statut).toBe(200);
+    expect(await query("select remboursement_id, archive from justificatif where fichier = ?", [releve.fichier])).toEqual([[null, 1]]);
+
+    const { lignes } = await (await s.requete(`/api/journal?cible=${r}`, { cookie })).json();
+    const suppression = lignes.find((l: { fonction: string }) => l.fonction === "supprimerRemboursement");
+    expect(JSON.parse(suppression.avant)).toMatchObject({ table: "remboursement", montant_vire: 1500, depenses: [{ id: d }] });
+    expect(suppression.apres).toBeNull();
   });
 });

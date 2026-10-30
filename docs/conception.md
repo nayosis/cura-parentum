@@ -45,7 +45,10 @@ Dépense ─┬─ Moyen de paiement ── Type de paiement
   (avec une note conseillée), **jamais reporté** sur le remboursement suivant.
 - Une fois validé, les dépenses cochées sont **remboursées et verrouillées** : seul un admin peut encore les modifier
   (et c'est journalisé).
-- **Pas d'annulation** d'un remboursement validé en V1 : écran de confirmation clair avant de valider.
+- **Pas d'annulation** d'un remboursement validé : écran de confirmation clair avant de valider. Pour réparer une
+  erreur de saisie (0.3), le **super admin** peut le supprimer : ses dépenses repassent « à rembourser » et redeviennent
+  modifiables, ses justificatifs sont archivés, le journal garde la fiche entière d'avant ; on refait ensuite un
+  remboursement avec les dépenses corrigées.
 - Création réservée à l'ordinateur ou à la tablette (il faut voir toute la liste).
 
 ## Justificatifs
@@ -93,12 +96,13 @@ saisie**.
 - **Pas de saisie hors ligne** en V1 : on photographie le ticket et on saisit plus tard.
 - **Libellés proposés** (0.2) : sous le libellé, les 5 plus fréquents, puis ceux qui contiennent le texte tapé (sans
   tenir compte des majuscules ni des accents). En choisir un coche aussi les catégories de la dernière dépense à ce
-  libellé. Un admin corrige les variantes dans Paramètres › Libellés : toutes les dépenses concernées sont renommées,
+  libellé. Boutons de saisie : « Enregistrer et saisir la suivante » en premier et en plein, puis Annuler et
+  « Enregistrer et fermer ». Un admin corrige les variantes dans Paramètres › Libellés : toutes les dépenses concernées sont renommées,
   chacune au journal avec la fiche avant / après.
 
 ## Hors V1
 
-Rappels (e-mail, notification, agenda) : retirés du socle Custos. Saisie hors ligne. Annulation d'un remboursement.
+Rappels (e-mail, notification, agenda) : retirés du socle Custos. Saisie hors ligne.
 Report automatique de l'écart. OCR des tickets.
 
 ## Plan de la V1

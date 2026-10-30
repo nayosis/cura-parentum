@@ -10,11 +10,13 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { Database } from "bun:sqlite";
 
 /** `admin` : admin ou super admin (seuls à pouvoir retoucher une dépense remboursée). */
-export type Contexte = { utilisateur: string; admin?: boolean; client?: string };
+export type Contexte = { utilisateur: string; admin?: boolean; superAdmin?: boolean; client?: string };
 export const contexteRequete = new AsyncLocalStorage<Contexte>();
 export const utilisateurCourant = () => contexteRequete.getStore()?.utilisateur ?? null;
 /** Hors requête (tests, tâches du serveur) : tous les droits. */
 export const adminCourant = () => contexteRequete.getStore()?.admin ?? !contexteRequete.getStore();
+/** Super admin (seul à pouvoir supprimer un remboursement). */
+export const superAdminCourant = () => contexteRequete.getStore()?.superAdmin ?? !contexteRequete.getStore();
 
 /** Tables suivies (colonnes cree_par, modifie_par, modifie_le). */
 export const TABLES_SUIVIES = ["type_paiement", "moyen_paiement", "categorie", "remboursement", "depense", "justificatif"];

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { creerDepense, derniereSaisie, libellesFrequents, majDepense, type CategorieDeDepense } from "../data/depenses";
 import { creerCategorie, listeCategories, listeMoyensPaiement } from "../data/parametres";
 import type { Depense } from "../db/schema";
+import type { Absence } from "../lib/absence";
 import { aujourdhui } from "../lib/dates";
 import { useEcran } from "../lib/ecran";
 import type { FichierEnvoye } from "../lib/fichiers";
@@ -13,14 +14,15 @@ import { euros, lireMontant } from "../lib/montants";
 import { ecrire } from "../lib/query";
 import { ChampDate } from "./Champs";
 import { BoutonsAjout, envoyerFichiers, Vignette } from "./Justificatifs";
+import { ChoixAbsence, absenceValide } from "./ModalAbsence";
 import { SuggestionsLibelle } from "./SuggestionsLibelle";
 
 /** La dépense à modifier (absente : nouvelle dépense). */
 export type DepenseAModifier = Depense & { categories: CategorieDeDepense[] };
 
-type Saisie = { montant: string; avoir: boolean; date: string | null; libelle: string; categorieIds: string[]; moyenId: string | null; note: string };
+type Saisie = { montant: string; avoir: boolean; date: string | null; libelle: string; categorieIds: string[]; moyenId: string | null; note: string; absence: Absence | null };
 
-const vide = (moyenId: string | null): Saisie => ({ montant: "", avoir: false, date: aujourdhui(), libelle: "", categorieIds: [], moyenId, note: "" });
+const vide = (moyenId: string | null): Saisie => ({ montant: "", avoir: false, date: aujourdhui(), libelle: "", categorieIds: [], moyenId, note: "", absence: null });
 
 /** Montant affiché dans le champ : « 23,40 » (sans signe : l'avoir est une case à part). */
 const enTexte = (centimes: number) => (Math.abs(centimes) / 100).toFixed(2).replace(".", ",");
@@ -94,6 +96,7 @@ export function ModalDepense({ depense, opened, onClose }: { depense: DepenseAMo
               categorieIds: depense.categories.map((c) => c.id),
               moyenId: depense.moyenId,
               note: depense.note ?? "",
+              absence: null,
             }
           : vide(null),
       );
@@ -105,7 +108,9 @@ export function ModalDepense({ depense, opened, onClose }: { depense: DepenseAMo
 
   const centimes = lireMontant(v.montant);
   const montant = centimes === null ? null : v.avoir ? -Math.abs(centimes) : Math.abs(centimes);
-  const valide = !!montant && !!v.date && !!v.libelle.trim() && !!moyenId;
+  // Absence déclarée seulement sans photo : un justificatif joint l'emporte.
+  const absence = fichiers.length ? null : v.absence;
+  const valide = !!montant && !!v.date && !!v.libelle.trim() && !!moyenId && (!absence || absenceValide(absence));
 
   const ajouter = async (f: File[]) => {
     setEnvoi(true);
@@ -123,7 +128,7 @@ export function ModalDepense({ depense, opened, onClose }: { depense: DepenseAMo
     setEnCours(true);
     try {
       const ok = await ecrire<unknown>(() =>
-        depense ? majDepense(depense.id, saisie, depense.modifieLe) : creerDepense({ ...saisie, justificatifs: fichiers.map((f) => ({ fichier: f.fichier, nom: f.nom })) }),
+        depense ? majDepense(depense.id, saisie, depense.modifieLe) : creerDepense({ ...saisie, absence, justificatifs: fichiers.map((f) => ({ fichier: f.fichier, nom: f.nom })) }),
       );
       if (ok === undefined) return;
       notifications.show({ color: "green", message: `${v.libelle.trim()} : ${euros(montant)}${fichiers.length ? ` · ${fichiers.length} justificatif${fichiers.length > 1 ? "s" : ""}` : ""}` });
@@ -187,12 +192,22 @@ export function ModalDepense({ depense, opened, onClose }: { depense: DepenseAMo
               </Box>
             ))}
             <BoutonsAjout onFichiers={ajouter} envoi={envoi} taille={telephone ? "md" : "sm"} />
-            {fichiers.length === 0 && (
+            {fichiers.length === 0 && !v.absence && (
               <Text size="xs" c="dimmed">
                 Ticket, facture : plusieurs photos pour un long ticket.
               </Text>
             )}
           </Group>
+        )}
+        {!depense && fichiers.length === 0 && (
+          <Stack gap={6}>
+            <Checkbox
+              label="Pas de justificatif"
+              checked={!!v.absence}
+              onChange={(e) => setV({ ...v, absence: e.currentTarget.checked ? { motif: "perdu" } : null })}
+            />
+            {v.absence && <ChoixAbsence valeur={v.absence} onChange={(a) => setV({ ...v, absence: a })} />}
+          </Stack>
         )}
 
         <Group grow align="flex-start">

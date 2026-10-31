@@ -47,7 +47,7 @@ describe("tableau de bord", () => {
     const t = await ok("tableauDeBord");
     expect(t.aRembourser).toEqual({ nb: 3, total: 2340 + 1250 - 599, depuis: jour });
     // Sans justificatif : la vieille dépense (remboursée), Pharmacie et Marché (à rembourser).
-    expect(t.sansJustificatif).toEqual({ nb: 3, aRembourser: 2 });
+    expect(t.sansJustificatif).toEqual({ nb: 3, aRembourser: 2, absents: 0 });
     expect(t.dernierRemboursement).toMatchObject({ montantVire: 14000, total: 14000, ecart: 0 });
     expect(t.annee.total).toBe(9000 + 2340 + 1250 - 599);
     expect(t.annee.parMois[Number(jour.slice(5, 7)) - 1]).toBe(autreMois === mois ? 9000 + 2991 : 2991);

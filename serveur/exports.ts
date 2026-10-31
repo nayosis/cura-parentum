@@ -9,6 +9,7 @@ import { query } from "../src/db/client";
 import { bilanAnnuel } from "../src/data/bilan";
 import { lireFoyer } from "../src/data/parametres";
 import { ficheRemboursement } from "../src/data/remboursements";
+import { libelleAbsence, type MotifAbsence } from "../src/lib/absence";
 import { dateLisible } from "../src/lib/dates";
 import { euros } from "../src/lib/montants";
 import { cheminFichier } from "./fichiers";
@@ -19,14 +20,26 @@ const court = (d: string) => dateLisible(d, { day: "2-digit", month: "2-digit", 
 const signe = (c: number) => `${c > 0 ? "+" : ""}${euros(c)}`;
 
 type Justif = { id: string; depenseId: string | null; nom: string; fichier: string; mime: string };
-type DepenseDossier = { id: string; date: string; libelle: string; montant: number; moyen: string; categories: string; note: string | null; justificatifs: Justif[] };
+type DepenseDossier = {
+  id: string;
+  date: string;
+  libelle: string;
+  montant: number;
+  moyen: string;
+  categories: string;
+  note: string | null;
+  /** Justificatif déclaré absent : « Perdu, déclaré par … le … ». */
+  absence: string | null;
+  justificatifs: Justif[];
+};
 
 /** Le remboursement, ses dépenses complètes (catégories, note, justificatifs non retirés) et ses propres justificatifs. */
 async function donneesDossier(id: string) {
   const r = await ficheRemboursement(id);
   const lignes = await query(
     `select d.id, d.date, d.libelle, d.montant, m.libelle, d.note,
-       (select group_concat(c.nom, ', ') from depense_categorie dc join categorie c on c.id = dc.categorie_id where dc.depense_id = d.id)
+       (select group_concat(c.nom, ', ') from depense_categorie dc join categorie c on c.id = dc.categorie_id where dc.depense_id = d.id),
+       d.absence, d.absence_detail, d.absence_par, d.absence_le
      from depense d join moyen_paiement m on m.id = d.moyen_id where d.remboursement_id = ? order by d.date, d.cree_le`,
     [id],
   );
@@ -37,7 +50,7 @@ async function donneesDossier(id: string) {
       [id],
     )
   ).map(([jid, depenseId, nom, fichier, mime]) => ({ id: jid, depenseId, nom, fichier, mime }) as Justif);
-  const depenses: DepenseDossier[] = lignes.map(([did, date, libelle, montant, moyen, note, categories]) => ({
+  const depenses: DepenseDossier[] = lignes.map(([did, date, libelle, montant, moyen, note, categories, motif, detail, absPar, absLe]) => ({
     id: did as string,
     date: date as string,
     libelle: libelle as string,
@@ -45,6 +58,9 @@ async function donneesDossier(id: string) {
     moyen: moyen as string,
     note: note as string | null,
     categories: (categories as string | null) ?? "",
+    absence: motif
+      ? `${libelleAbsence(motif as MotifAbsence, detail as string | null)}, déclaré par ${absPar ?? "?"} le ${absLe ? court(String(absLe).slice(0, 10)) : "?"}`
+      : null,
     justificatifs: justifs.filter((j) => j.depenseId === did),
   }));
   return { r, depenses, virement: justifs.filter((j) => !j.depenseId), foyer: await lireFoyer() };
@@ -74,7 +90,7 @@ export async function modificationsUlterieures(id: string, depenseIds: string[])
   }));
 }
 
-const TECHNIQUES = new Set(["table", "id", "cree_le", "cree_par", "modifie_par", "modifie_le", "moyen_id", "type_id", "remboursement_id", "depense_id", "justificatifs", "depenses"]);
+const TECHNIQUES = new Set(["table", "id", "cree_le", "cree_par", "modifie_par", "modifie_le", "moyen_id", "type_id", "remboursement_id", "depense_id", "justificatifs", "depenses", "absence_par", "absence_le"]);
 
 /** « montant : 23,40 € -> 24,40 € ; libellé : … » */
 function ecarts(a: string | null, b: string | null) {
@@ -88,6 +104,9 @@ function ecarts(a: string | null, b: string | null) {
 }
 
 const ACTIONS: Record<string, string> = {
+  declarerAbsence: "Justificatif déclaré absent",
+  renommerLibelle: "Libellé renommé",
+  supprimerRemboursement: "Remboursement supprimé",
   majDepense: "Dépense modifiée",
   supprimerDepense: "Dépense supprimée",
   ajouterJustificatifs: "Justificatif ajouté",
@@ -142,7 +161,7 @@ export async function dossierRemboursement(id: string, par: string) {
       d.libelle,
       d.categories,
       d.moyen,
-      d.justificatifs.length ? d.justificatifs.map((j) => `A${annexes.get(j.id)}`).join(", ") : "aucune",
+      d.justificatifs.length ? d.justificatifs.map((j) => `A${annexes.get(j.id)}`).join(", ") : d.absence ? "absent" : "aucune",
       euros(d.montant),
     ]),
     ["", "Total", "", "", "", euros(r.total)],
@@ -151,6 +170,12 @@ export async function dossierRemboursement(id: string, par: string) {
   if (notes.length) {
     p.sousTitre("Notes des dépenses");
     for (const d of notes) p.texte(`${court(d.date)} ${d.libelle} : ${d.note}`);
+  }
+
+  const absents = depenses.filter((d) => d.absence && !d.justificatifs.length);
+  if (absents.length) {
+    p.sousTitre("Justificatifs absents");
+    for (const d of absents) p.texte(`${court(d.date)} ${d.libelle} ${euros(d.montant)} : ${d.absence}`);
   }
 
   const modifs = await modificationsUlterieures(id, depenses.map((d) => d.id));
@@ -221,7 +246,7 @@ export async function zipRemboursement(id: string, par: string) {
   };
   for (const d of depenses) {
     const noms = d.justificatifs.map((j) => ajouter(j, [d.date, d.libelle, montantFichier(d.montant)]));
-    lignesCsv.push([d.date, d.libelle, montantFichier(d.montant), d.moyen, d.categories, d.note ?? "", noms.join(", ")].map(csv).join(";"));
+    lignesCsv.push([d.date, d.libelle, montantFichier(d.montant), d.moyen, d.categories, d.note ?? "", noms.length ? noms.join(", ") : d.absence ? `Absent (${d.absence})` : ""].map(csv).join(";"));
   }
   for (const j of virement) ajouter(j, [r.dateVirement, "virement", j.nom.replace(/\.[^.]+$/, "")]);
   // BOM : Excel lit l'UTF-8 (accents) correctement.
@@ -240,7 +265,7 @@ export async function bilanPdf(annee: number, par: string) {
   p.titre(`${titre} · dépenses pour ${foyer.nom || "le foyer"}`);
   p.champs([
     ["Dépenses", `${b.nbDepenses} dépense${b.nbDepenses > 1 ? "s" : ""} pour ${euros(b.total)}`],
-    ["Sans justificatif", String(b.sansJustificatif)],
+    ["Sans justificatif", `${b.sansJustificatif}${b.absents ? ` (et ${b.absents} déclaré${b.absents > 1 ? "s" : ""} absent${b.absents > 1 ? "s" : ""} : ticket perdu…)` : ""}`],
     ["Remboursements", `${b.remboursements.length} virement${b.remboursements.length > 1 ? "s" : ""}, ${euros(b.totalVire)}`],
     ["Écart cumulé", b.ecartCumule === 0 ? "aucun" : `${signe(b.ecartCumule)} (${b.ecartCumule > 0 ? "trop-perçu" : "manque"})`],
     ["Compte débité", foyer.compte || "-"],

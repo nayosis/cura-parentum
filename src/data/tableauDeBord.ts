@@ -17,9 +17,10 @@ export async function tableauDeBord() {
   const finAnnee = `${annee}-12-31`;
 
   const [[nbAttente, totalAttente, depuis]] = await query("select count(*), coalesce(sum(montant), 0), min(date) from depense where remboursement_id is null");
-  const [[sansJustificatif, sansJustificatifAttente]] = await query(
-    `select count(*), coalesce(sum(remboursement_id is null), 0) from depense d
-     where not exists (select 1 from justificatif j where j.depense_id = d.id and j.archive = 0)`,
+  // Sans justificatif : les vrais oublis ; les absences déclarées (ticket perdu…) sont comptées à part.
+  const [[sansJustificatif, sansJustificatifAttente, absents]] = await query(
+    `select coalesce(sum(d.absence is null), 0), coalesce(sum(d.absence is null and d.remboursement_id is null), 0), coalesce(sum(d.absence is not null), 0)
+     from depense d where not exists (select 1 from justificatif j where j.depense_id = d.id and j.archive = 0)`,
   );
   const mensuel = await query("select substr(date, 6, 2), sum(montant) from depense where date between ? and ? group by 1", [debutAnnee, finAnnee]);
   const parMois = Array.from({ length: 12 }, () => 0);
@@ -32,7 +33,7 @@ export async function tableauDeBord() {
   return {
     jour,
     aRembourser: { nb: Number(nbAttente), total: Number(totalAttente), depuis: (depuis as string | null) ?? null },
-    sansJustificatif: { nb: Number(sansJustificatif), aRembourser: Number(sansJustificatifAttente) },
+    sansJustificatif: { nb: Number(sansJustificatif), aRembourser: Number(sansJustificatifAttente), absents: Number(absents) },
     dernierRemboursement: remboursements[0] ?? null,
     annee: { annee: Number(annee), total: totalAnnee, moyenneMensuelle: Math.round(totalAnnee / moisEcoules), parMois },
     categoriesMois: await parCategorie(`${mois}-01`, `${mois}-31`),

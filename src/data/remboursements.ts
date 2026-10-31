@@ -42,6 +42,8 @@ export async function ficheRemboursement(id: string) {
       libelle: depense.libelle,
       montant: depense.montant,
       moyenLibelle: moyenPaiement.libelle,
+      absence: depense.absence,
+      absenceDetail: depense.absenceDetail,
       nbJustificatifs: sql<number>`(select count(*) from justificatif j where j.depense_id = ${depense.id} and j.archive = 0)`,
     })
     .from(depense)
@@ -78,6 +80,8 @@ export async function candidats(debut: string, fin: string) {
       montant: depense.montant,
       moyenLibelle: moyenPaiement.libelle,
       creeLe: depense.creeLe,
+      absence: depense.absence,
+      absenceDetail: depense.absenceDetail,
       nbJustificatifs: sql<number>`(select count(*) from justificatif j where j.depense_id = ${depense.id} and j.archive = 0)`,
     })
     .from(depense)

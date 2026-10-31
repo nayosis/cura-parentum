@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
+import { EtatJustificatif, sansJustificatif } from "../components/EtatJustificatif";
 import { ActionIcon, Alert, Anchor, Box, Button, Card, Checkbox, Divider, Group, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconArrowLeft, IconPaperclip, IconX } from "@tabler/icons-react";
+import { IconArrowLeft, IconX } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { candidats, creerRemboursement, plageProposee } from "../data/remboursements";
@@ -54,13 +55,7 @@ function Section({ titre, couleur, lignes, decochees, basculer, tout }: {
           <Table.Td>{d.libelle}</Table.Td>
           <Table.Td c="dimmed">{d.moyenLibelle}</Table.Td>
           <Table.Td w={40} c="dimmed">
-            {d.nbJustificatifs === 0 ? (
-              <Text size="xs" c="orange.8">
-                aucun
-              </Text>
-            ) : (
-              <IconPaperclip size={14} />
-            )}
+            <EtatJustificatif d={d} court />
           </Table.Td>
           <Table.Td ta="right" fw={600} style={{ whiteSpace: "nowrap" }}>
             {euros(d.montant)}
@@ -95,7 +90,7 @@ export function NouveauRemboursement() {
   const total = cochees.reduce((t, d) => t + d.montant, 0);
   const vire = lireMontant(montant);
   const ecart = vire === null ? null : vire - total;
-  const sansJustificatif = cochees.filter((d) => d.nbJustificatifs === 0).length;
+  const nbSansJustificatif = cochees.filter(sansJustificatif).length;
   const valide = cochees.length > 0 && !!dateVirement && plageValide && vire !== null && vire > 0;
 
   const basculer = (id: string) =>
@@ -282,9 +277,9 @@ export function NouveauRemboursement() {
                   {ecart > 0 ? "Trop-perçu" : "Manque"} : il est seulement affiché, jamais reporté. Une note pour l'expliquer est conseillée.
                 </Text>
               )}
-              {sansJustificatif > 0 && (
+              {nbSansJustificatif > 0 && (
                 <Alert color="orange" p="xs" mt="xs">
-                  {sansJustificatif} dépense{sansJustificatif > 1 ? "s" : ""} cochée{sansJustificatif > 1 ? "s" : ""} sans justificatif.
+                  {nbSansJustificatif} dépense{nbSansJustificatif > 1 ? "s" : ""} cochée{nbSansJustificatif > 1 ? "s" : ""} sans justificatif.
                 </Alert>
               )}
             </Stack>

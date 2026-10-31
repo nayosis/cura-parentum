@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { sansJustificatif } from "../components/EtatJustificatif";
 import { Alert, Box, Button, Card, Group, SegmentedControl, SimpleGrid, Stack, Text, ThemeIcon, Title, UnstyledButton } from "@mantine/core";
 import { IconAdjustmentsHorizontal, IconAlertTriangle, IconChevronRight, IconHeart, IconPlus } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -139,7 +140,7 @@ function DernieresDepenses({ t, ouvrir }: { t: Donnees; ouvrir: (id: string) => 
                     {dateLisible(d.date, { day: "numeric", month: "short" })} · {d.moyenLibelle}
                   </Text>
                 </Box>
-                {d.nbJustificatifs === 0 && (
+                {sansJustificatif(d) && (
                   <Text size="xs" fw={600} c="orange.8">
                     sans justificatif
                   </Text>
@@ -299,7 +300,12 @@ export function Accueil() {
               label="Sans justificatif"
               valeur={t.sansJustificatif.nb}
               alerte={t.sansJustificatif.nb > 0}
-              detail={t.sansJustificatif.nb ? `dont ${t.sansJustificatif.aRembourser} à rembourser` : "Toutes les dépenses sont justifiées"}
+              detail={[
+                t.sansJustificatif.nb ? `dont ${t.sansJustificatif.aRembourser} à rembourser` : "Rien d'oublié",
+                t.sansJustificatif.absents ? `${t.sansJustificatif.absents} déclaré${t.sansJustificatif.absents > 1 ? "s" : ""} absent${t.sansJustificatif.absents > 1 ? "s" : ""}` : "",
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               onClick={() => versDepenses("sans_justificatif")}
             />
             <Tuile

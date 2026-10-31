@@ -18,8 +18,8 @@ export async function bilanAnnuel(annee: number) {
   const debut = `${annee}-01-01`;
   const fin = `${annee}-12-31`;
   const [[nb, total]] = await query("select count(*), coalesce(sum(montant), 0) from depense where date between ? and ?", [debut, fin]);
-  const [[sansJustificatif]] = await query(
-    `select count(*) from depense d where d.date between ? and ?
+  const [[sansJustificatif, absents]] = await query(
+    `select coalesce(sum(d.absence is null), 0), coalesce(sum(d.absence is not null), 0) from depense d where d.date between ? and ?
      and not exists (select 1 from justificatif j where j.depense_id = d.id and j.archive = 0)`,
     [debut, fin],
   );
@@ -39,6 +39,7 @@ export async function bilanAnnuel(annee: number) {
     nbDepenses: Number(nb),
     total: Number(total),
     sansJustificatif: Number(sansJustificatif),
+    absents: Number(absents),
     parMois,
     parCategorie: await parCategorie(debut, fin),
     parMoyen,

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Alert, Anchor, Button, Card, Group, Modal, SimpleGrid, Stack, Table, Text, TextInput, Textarea, Title, UnstyledButton } from "@mantine/core";
-import { IconArrowLeft, IconChevronRight, IconDownload, IconFileZip, IconPaperclip, IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronRight, IconDownload, IconFileZip, IconPencil, IconTrash } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ficheRemboursement, majRemboursement, supprimerRemboursement } from "../data/remboursements";
 import { ChampDate } from "../components/Champs";
+import { EtatJustificatif } from "../components/EtatJustificatif";
 import { Historique } from "../components/Historique";
 import { Justificatifs } from "../components/Justificatifs";
 import { dateLisible } from "../lib/dates";
@@ -207,13 +208,7 @@ export function FicheRemboursement() {
                   <Table.Td>{d.libelle}</Table.Td>
                   <Table.Td c="dimmed">{d.moyenLibelle}</Table.Td>
                   <Table.Td w={60} c="dimmed">
-                    {d.nbJustificatifs === 0 ? (
-                      <Text size="xs" c="orange.8">
-                        aucun
-                      </Text>
-                    ) : (
-                      <IconPaperclip size={14} />
-                    )}
+                    <EtatJustificatif d={d} court />
                   </Table.Td>
                   <Table.Td ta="right" fw={600}>
                     {euros(d.montant)}

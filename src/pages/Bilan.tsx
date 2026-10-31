@@ -99,7 +99,11 @@ export function Bilan() {
         <>
           <SimpleGrid cols={{ base: 2, lg: 4 }}>
             <Chiffre label={`Dépensé en ${b.annee}`} valeur={euros(b.total)} detail={`${b.nbDepenses} dépense${b.nbDepenses > 1 ? "s" : ""}`} />
-            <Chiffre label="Sans justificatif" valeur={String(b.sansJustificatif)} />
+            <Chiffre
+              label="Sans justificatif"
+              valeur={String(b.sansJustificatif)}
+              detail={b.absents ? `et ${b.absents} déclaré${b.absents > 1 ? "s" : ""} absent${b.absents > 1 ? "s" : ""}` : undefined}
+            />
             <Chiffre label="Remboursé" valeur={euros(b.totalVire)} detail={`${b.remboursements.length} virement${b.remboursements.length > 1 ? "s" : ""}`} />
             <Chiffre label="Écart cumulé" valeur={signe(b.ecartCumule)} detail={b.ecartCumule > 0 ? "trop-perçu" : b.ecartCumule < 0 ? "manque" : undefined} />
           </SimpleGrid>

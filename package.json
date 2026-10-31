@@ -1,7 +1,7 @@
 {
   "name": "cura-parentum",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Cura Parentum : logiciel libre de suivi des dépenses faites pour ses parents (justificatifs, remboursements par virement, dossiers PDF).",
   "license": "AGPL-3.0-or-later",
   "repository": "github:nayosis/cura-parentum",

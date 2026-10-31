@@ -97,6 +97,11 @@ export const depense = sqliteTable(
       .references(() => moyenPaiement.id, { onDelete: "restrict" }),
     note: text("note"),
     remboursementId: text("remboursement_id").references(() => remboursement.id, { onDelete: "restrict" }),
+    /** Justificatif déclaré absent : motif (perdu, pas de ticket, autre + précision), qui et quand. */
+    absence: text("absence", { enum: ["perdu", "pas_de_ticket", "autre"] }),
+    absenceDetail: text("absence_detail"),
+    absencePar: text("absence_par"),
+    absenceLe: text("absence_le"),
     creeLe: creeLe(),
     ...tracabilite(),
   },

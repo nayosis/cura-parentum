@@ -4,6 +4,7 @@ import { depense, justificatif, moyenPaiement, remboursement } from "../db/schem
 import { ErreurMetier } from "../../serveur/erreurs";
 import { instantane, journaliser } from "../../serveur/journal";
 import { adminCourant, utilisateurCourant } from "../../serveur/tracabilite";
+import { MOTIFS_ABSENCE, type Absence } from "../lib/absence";
 import { DATE, instructionsJustificatifs, type FichierARattacher } from "./commun";
 import { verifierVersion, versionDe } from "./version";
 
@@ -29,7 +30,8 @@ export async function listeDepenses(f: Filtre = {}) {
   if (f.fin) conditions.push(sql`${depense.date} <= ${f.fin}`);
   if (f.statut === "a_rembourser") conditions.push(isNull(depense.remboursementId));
   if (f.statut === "remboursees") conditions.push(isNotNull(depense.remboursementId));
-  if (f.statut === "sans_justificatif") conditions.push(sql`${NB_JUSTIFICATIFS} = 0`);
+  // Sans justificatif : les vrais oublis (une absence déclarée n'en est pas un).
+  if (f.statut === "sans_justificatif") conditions.push(sql`${NB_JUSTIFICATIFS} = 0 and ${depense.absence} is null`);
   if (f.moyenId) conditions.push(eq(depense.moyenId, f.moyenId));
   if (f.categorieId) conditions.push(sql`exists (select 1 from depense_categorie dc where dc.depense_id = ${depense.id} and dc.categorie_id = ${f.categorieId})`);
   const r = f.recherche?.trim();
@@ -108,6 +110,17 @@ async function verifierModifiable(id: string) {
   if (l[0] && !adminCourant()) throw new ErreurMetier("Cette dépense a été remboursée : seul un admin peut la modifier.", 403);
 }
 
+function verifierAbsence(a: Absence) {
+  if (!MOTIFS_ABSENCE.some((m) => m.value === a.motif)) throw new ErreurMetier("Motif d'absence inconnu.");
+  if (a.motif === "autre" && !a.detail?.trim()) throw new ErreurMetier("Précisez pourquoi le justificatif est absent.");
+}
+
+/** Déclare (ou retire, `null`) l'absence de justificatif d'une dépense, avec qui et quand. */
+const instructionAbsence = (id: string, a: Absence | null): Statement => ({
+  sql: "update depense set absence = ?, absence_detail = ?, absence_par = ?, absence_le = ? where id = ?",
+  params: a ? [a.motif, a.detail?.trim() || null, utilisateurCourant(), new Date().toISOString(), id] : [null, null, null, null, id],
+});
+
 const instructionsCategories = (id: string, categorieIds: string[]): Statement[] => [
   { sql: "delete from depense_categorie where depense_id = ?", params: [id] },
   ...[...new Set(categorieIds)].map((c) => ({ sql: "insert into depense_categorie (depense_id, categorie_id) values (?, ?)", params: [id, c] })),
@@ -116,8 +129,11 @@ const instructionsCategories = (id: string, categorieIds: string[]): Statement[]
 // --- Écriture
 
 /** Nouvelle dépense, avec ses catégories et ses justificatifs, d'un seul tenant. */
-export async function creerDepense(v: Saisie & { justificatifs?: FichierARattacher[] }) {
+export async function creerDepense(v: Saisie & { justificatifs?: FichierARattacher[]; absence?: Absence | null }) {
   await verifierSaisie(v, true);
+  // Un justificatif joint l'emporte sur une absence déclarée.
+  const absence = v.justificatifs?.length ? null : (v.absence ?? null);
+  if (absence) verifierAbsence(absence);
   const id = newId();
   await batch([
     {
@@ -126,6 +142,7 @@ export async function creerDepense(v: Saisie & { justificatifs?: FichierARattach
     },
     ...instructionsCategories(id, v.categorieIds ?? []),
     ...(await instructionsJustificatifs(v.justificatifs ?? [], { depenseId: id })),
+    ...(absence ? [instructionAbsence(id, absence)] : []),
   ]);
   return id;
 }
@@ -169,8 +186,8 @@ export async function ajouterJustificatifs(cible: string, fichiers: FichierARatt
   const estDepense = (await query("select 1 from depense where id = ?", [cible])).length > 0;
   if (!estDepense && !(await query("select 1 from remboursement where id = ?", [cible])).length) throw new ErreurMetier("Dépense ou remboursement introuvable.", 404);
   const sts = await instructionsJustificatifs(fichiers, estDepense ? { depenseId: cible } : { remboursementId: cible });
-  // La fiche change de version : un autre écran ouvert sur elle le saura.
-  sts.push({ sql: `update ${estDepense ? "depense" : "remboursement"} set modifie_le = modifie_le where id = ?`, params: [cible] });
+  // La fiche change de version : un autre écran ouvert sur elle le saura. Un justificatif retrouvé efface l'absence déclarée.
+  sts.push(estDepense ? instructionAbsence(cible, null) : { sql: "update remboursement set modifie_le = modifie_le where id = ?", params: [cible] });
   await batch(sts);
 }
 
@@ -208,4 +225,27 @@ export async function renommerLibelle(ancien: string, nouveau: string) {
     journaliser(utilisateurCourant() ?? "systeme", "renommerLibelle", [id], null, avant);
   }
   return ids.length;
+}
+
+/**
+ * Déclare le justificatif absent (ticket perdu, pas de ticket…) sur une ou plusieurs dépenses, ou retire la
+ * déclaration (`null`). Dépense remboursée : admins seulement, comme toute retouche. Les dépenses qui ont un
+ * justificatif sont laissées telles quelles. Chaque dépense modifiée a sa ligne au journal.
+ */
+export async function declarerAbsence(ids: string[], absence: Absence | null) {
+  if (absence) verifierAbsence(absence);
+  const choisies = [...new Set(ids)];
+  if (!choisies.length) throw new ErreurMetier("Aucune dépense choisie.");
+  for (const id of choisies) await verifierModifiable(id);
+  let n = 0;
+  for (const id of choisies) {
+    const [[nb]] = await query("select count(*) from justificatif where depense_id = ? and archive = 0", [id]);
+    if (absence && Number(nb)) continue;
+    const avant = instantane(id);
+    const { sql: requete, params } = instructionAbsence(id, absence);
+    await query(requete, params);
+    journaliser(utilisateurCourant() ?? "systeme", "declarerAbsence", [id], null, avant);
+    n++;
+  }
+  return n;
 }

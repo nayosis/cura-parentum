@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Alert, Anchor, Badge, Button, Card, Group, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconArrowLeft, IconLock, IconPencil, IconTrash } from "@tabler/icons-react";
+import { IconArrowLeft, IconFileOff, IconLock, IconPencil, IconTrash } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ficheDepense, supprimerDepense } from "../data/depenses";
+import { declarerAbsence, ficheDepense, supprimerDepense } from "../data/depenses";
 import { Historique, quand } from "../components/Historique";
 import { Justificatifs } from "../components/Justificatifs";
+import { ModalAbsence } from "../components/ModalAbsence";
 import { ModalDepense } from "../components/ModalDepense";
+import { libelleAbsence } from "../lib/absence";
 import { dateLisible } from "../lib/dates";
 import { useEcran } from "../lib/ecran";
 import { euros } from "../lib/montants";
@@ -22,6 +24,7 @@ export function FicheDepense() {
   const naviguer = useNavigate();
   const { data: d, error } = useQuery({ queryKey: ["depense", id], queryFn: () => ficheDepense(id) });
   const [edition, setEdition] = useState(false);
+  const [absence, setAbsence] = useState(false);
 
   if (error)
     return (
@@ -117,6 +120,32 @@ export function FicheDepense() {
       </Card>
 
       <Justificatifs cible={d.id} justificatifs={d.justificatifs} ajout={peutEcrire()} modifiable={modifiable} />
+
+      {!d.justificatifs.some((j) => !j.archive) &&
+        (d.absence ? (
+          <Alert color="gray" variant="light" icon={<IconFileOff size={18} />} title={`Justificatif absent : ${libelleAbsence(d.absence, d.absenceDetail)}`}>
+            <Group justify="space-between">
+              <Text size="sm">
+                Déclaré par {d.absencePar ?? "?"}
+                {d.absenceLe && ` le ${quand(d.absenceLe)}`}.
+              </Text>
+              {modifiable && (
+                <Button size="xs" variant="subtle" color="gray" onClick={() => ecrire(() => declarerAbsence([d.id], null))}>
+                  Retirer la déclaration
+                </Button>
+              )}
+            </Group>
+          </Alert>
+        ) : (
+          modifiable && (
+            <Group>
+              <Button size="xs" variant="subtle" color="gray" leftSection={<IconFileOff size={14} />} onClick={() => setAbsence(true)}>
+                Pas de justificatif ? Le déclarer absent
+              </Button>
+            </Group>
+          )
+        ))}
+      <ModalAbsence ids={absence ? [d.id] : null} onClose={() => setAbsence(false)} />
 
       {modifiable && (
         <Group>

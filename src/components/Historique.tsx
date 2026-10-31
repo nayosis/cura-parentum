@@ -12,6 +12,9 @@ const ACTIONS: Record<string, string> = {
   ajouterJustificatifs: "Justificatif ajouté",
   retirerJustificatif: "Justificatif retiré",
   renommerJustificatif: "Justificatif renommé",
+  declarerAbsence: "Justificatif déclaré absent",
+  renommerLibelle: "Libellé renommé",
+  supprimerRemboursement: "Remboursement supprimé",
   creerRemboursement: "Remboursement validé",
   majRemboursement: "Remboursement corrigé",
 };
